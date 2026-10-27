@@ -1,0 +1,11 @@
+# Optional browser/Electron prototype
+node_modules/
+dist/
+
+# Native Windows build output
+windows/build/
+windows/out/
+island-logic-test
+
+.DS_Store
+*.local
