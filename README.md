@@ -32,8 +32,9 @@ These images are rendered from the actual FXML views on a simulated desktop. **7
 
 1. Choose **File → Open** and select the repository root (the folder containing `pom.xml`). Trust the project if prompted and allow IDEA to import the Maven project and download its dependencies.
 2. In **File → Project Structure**, select a JDK 17 or newer as the project SDK. If necessary, select the same JDK for the Maven runner in IDEA's Maven settings.
-3. Select the shared **Island JavaFX** run configuration and click **Run**. Select **Island Tests** to run the JUnit tests. The configurations are stored in `.run/` and use Maven, so no machine-specific JavaFX SDK path or VM options are required.
-4. The JavaFX views are `src/main/resources/com/islandfx/island.fxml` and `jarvis.fxml`; the Java controllers are in `src/main/java/com/islandfx/`.
+3. In the run-configuration dropdown at the top right, select the shared **Island JavaFX** Maven configuration and click **Run**. Do not use an automatically generated **Launcher** application configuration: it can put JavaFX on the classpath and cause an `unnamed module` warning. Select **Island Tests** to run the JUnit tests.
+4. If the shared configuration is missing, reload the Maven project and select it again, or open the **Maven** tool window and run the `javafx:run` goal. The shared configurations are stored in `.run/`; the JavaFX Maven plugin supplies the module path without machine-specific VM options.
+5. The JavaFX views are `src/main/resources/com/islandfx/island.fxml` and `jarvis.fxml`; the Java controllers are in `src/main/java/com/islandfx/`.
 
 The project is designed for IDEA's Maven import; the IDE setup and Windows-specific features have not yet been tested on Windows.
 
@@ -87,6 +88,7 @@ JARVIS is a **small local command interface, not general-purpose AI**. The media
 
 ## Troubleshooting
 
+- **“Unsupported JavaFX configuration: classes were loaded from 'unnamed module'”:** This warning means JavaFX was launched on the classpath, typically by IntelliJ's auto-generated `Launcher` configuration. It is not itself a crash. Select the shared **Island JavaFX** Maven run configuration (or run `mvn javafx:run`) so JavaFX is placed on the module path. If the app still does not appear, check the rest of the console output for an exception or an exit code.
 - **Voice is unavailable:** Check the default microphone, Windows microphone permissions, and the installed Windows speech recognizer. Click the core to retry.
 - **Battery shows `--`:** Windows could not provide a reading, or the device reports no battery.
 - **Media controls do nothing:** Open a player that responds to Windows media keys; Windows chooses which app receives them.
