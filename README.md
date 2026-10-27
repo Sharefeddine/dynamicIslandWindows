@@ -1,123 +1,99 @@
-# Dynamic Island for Windows
+# Island for Windows — JavaFX & FXML
 
-A small, **native Windows desktop app** with a top-centered Dynamic Island and a separate JARVIS core. The island shows Windows battery status and expands into media controls; JARVIS provides a few opt-in, local voice commands.
+A Windows desktop companion with a top-centered Dynamic Island and a separate JARVIS core. The **primary implementation is JavaFX**: its layouts are written in **FXML**, its behavior is Java, and its styling is JavaFX CSS. It is not a website and does not require Node.js or Electron to run.
 
-The Windows app uses Win32, GDI+, and Windows Speech API (SAPI). It does **not** need a browser, Node.js, an Electron runtime, a server, or an account to run.
+> **Status:** The JavaFX views, command logic, and simulated interactions have been tested in a headless Linux environment. The Windows build and its battery, media, tray, hotkey, and microphone integration still need testing on Windows. The Windows preview build is unsigned.
 
-> **Project status:** Early development. The app has been cross-compiled and its command and placement logic have been tested. The downloadable cross-compiled executable has not yet been runtime-tested on Windows; microphone, battery, and media integration should be checked on your own device.
+## What it looks like
+
+| Compact island | Expanded media controls |
+| --- | --- |
+| ![Compact JavaFX island and JARVIS](docs/previews/island-compact.png) | ![Expanded JavaFX island and listening core](docs/previews/island-expanded.png) |
+
+These images are rendered from the actual FXML views on a simulated desktop. **72% and “Listening...” are sample preview states**; they are not readings from a real device or microphone.
 
 ## Features
 
-- An always-on-top, expandable island at the top of the primary display's work area.
-- Real battery percentage from Windows, or `--` when no battery reading is available.
-- Previous, play/pause, and next controls that send Windows media keys to the active media player.
-- A separate, draggable JARVIS core, with a clear **Listening...** indicator while voice input is active.
-- Microphone input that is off by default and starts only when requested.
-- A system-tray menu, an optional `Ctrl+Alt+J` shortcut, per-monitor DPI handling, and a single-instance guard.
-- A portable executable; no installer or administrator privileges are required.
+- A transparent, always-on-top island centered in the primary display's work area.
+- Windows battery percentage via `GetSystemPowerStatus`; `--` means no reading is available.
+- Expandable previous, play/pause, and next buttons that send Windows media keys to the active media player.
+- A separate draggable JARVIS card, which displays **Listening...** when voice input is active.
+- An opt-in microphone, system-tray menu, optional `Ctrl+Alt+J` hotkey, and single-instance guard.
+- JavaFX and FXML UI, with Java Native Access (JNA) used for small Windows API calls.
 
 ## Requirements
 
-- 64-bit Windows 10 or Windows 11.
-- A media application that responds to Windows media keys, for music controls.
-- For voice commands: a microphone, Windows desktop-app microphone permission, and a compatible installed Windows SAPI speech recognizer. The command phrases supported by this app are in English.
+- 64-bit Windows 10 or 11.
+- A compatible media application to respond to Windows media keys.
+- For voice: a microphone, Windows desktop-app microphone permission, and a compatible installed Windows speech recognizer. The supported command phrases are in English.
+- To **build from source**: JDK 17 or newer, Maven 3.8 or newer, and network access to Maven Central. A packaged app image includes its own Java runtime.
 
-The executable is **unsigned**, so Windows may display a reputation warning. It is built from the source in this repository.
+## Run or build on Windows
 
-## Get and run the app
+A cross-built JavaFX preview ZIP may be supplied separately with this project. Extract its entire folder and run `Island.exe`; keep the `app`, `javafx`, and `runtime` folders next to it. It has not yet been tested on Windows and is unsigned, so Windows may display a reputation warning. Its JavaFX SDK files came from community mirrors and have not been independently verified; see [preview provenance](docs/javafx-preview-provenance.md). For a more reproducible package, build from source on Windows using trusted dependencies.
 
-### Download a build
+To run directly from source, open PowerShell in the repository root:
 
-1. Open [Actions → Windows desktop](https://github.com/Sharefeddine/dynamicIslandWindows/actions/workflows/windows.yml).
-2. Choose a **successful run for the branch you want** and download its `Island-Windows-x64` artifact. You may need to sign in to GitHub to download artifacts. Artifacts are available only after a successful run and subject to GitHub's retention settings.
-3. Extract the downloaded ZIP and run `Island.exe`.
+```powershell
+mvn -f javafx/pom.xml clean verify
+mvn -f javafx/pom.xml javafx:run
+```
 
-You can also build the executable yourself using the instructions below. Source-code downloads do not include a built executable.
+To create a portable Windows app image with `Island.exe` and its own Java runtime, use a full JDK with `jpackage`:
 
-### Controls
+```powershell
+.\javafx\build-windows.ps1 -Package
+```
+
+The result is `javafx\target\package\Island\Island.exe`. Keep the whole `Island` folder together when moving it. This packaging script has not yet been run on Windows. `mvn clean verify` runs the JUnit logic tests; the JavaFX UI smoke harnesses in `javafx/src/test/` were also run headlessly in the development environment.
+
+**Important:** `downloads/Island-Windows-x64.zip` is the earlier C++/Win32 build, not this JavaFX implementation. It is retained only as a legacy reference; do not use it to evaluate the JavaFX version.
+
+## Controls
 
 | Action | Control |
 | --- | --- |
-| Expand or collapse media controls | Click the island |
-| Previous, play/pause, next | Click the corresponding button in the expanded island |
-| Start or stop listening | Click the JARVIS core, use its tray menu, or press `Ctrl+Alt+J` if the shortcut is available |
-| Move JARVIS | Drag the top of its card |
-| Hide JARVIS | Click its **×**, or click the tray icon. Hiding it stops listening. |
-| Show JARVIS again | Click the tray icon or use the tray menu |
+| Expand or collapse media controls | Click the top island |
+| Previous, play/pause, next | Click the corresponding control in the expanded island |
+| Start or stop listening | Click the JARVIS orb or mic button, use the tray menu, or press `Ctrl+Alt+J` if available |
+| Move JARVIS | Drag its header |
+| Hide JARVIS | Click its **×** or the tray icon. Hiding it stops listening. |
+| Show JARVIS | Use the tray icon or right-click the island |
 | Exit | Right-click the island or tray icon and select **Exit Island** |
 
-The app stays above ordinary windows. Only one instance can run per user session. If it is already running, use the system-tray icon to find or exit it.
+## Voice commands and privacy
 
-## JARVIS commands
+The microphone is **off by default**. On request, the Java app starts a local Windows PowerShell worker using `System.Speech`; the worker exits when listening stops, JARVIS is hidden, or the app exits. The app does not itself send audio to a cloud service.
 
-Click the core and wait for **Listening...**, then try a phrase such as:
-
-| Say | Result |
+| Example phrase | Action |
 | --- | --- |
-| `play music` or `pause music` | Send the Windows play/pause media key |
-| `next track` | Send the next-track media key |
-| `previous track` | Send the previous-track media key |
-| `what time is it` | Show the local time in the JARVIS card |
-| `battery` | Show the current Windows battery reading |
-| `help` | Show example commands |
-| `stop listening` | Turn off the microphone |
+| `play music` or `pause music` | Send the play/pause media key |
+| `next track` / `previous track` | Send the corresponding media key |
+| `what time is it` | Show local time |
+| `battery` | Show the Windows battery reading |
+| `help` | Show command examples |
+| `stop listening` | Stop microphone input |
 
-JARVIS is a **small local command interface, not a general-purpose AI**. It cannot answer arbitrary questions. Recognition uses the Windows speech engine and default microphone. The app does not itself send audio to a cloud service. Hiding JARVIS or exiting the app stops listening.
-
-Media actions send system keys; they do not launch a specific player, retrieve track information, or confirm playback state. In particular, both “play” and “pause” send the same Windows play/pause **toggle**, so the result depends on the player's current state. The battery reading comes from `GetSystemPowerStatus`; the app does not simulate a charge level.
-
-## Build from source on Windows
-
-Install Visual Studio 2022 or Visual Studio Build Tools with **Desktop development with C++**, the Windows SDK, and CMake. From the repository root in PowerShell:
-
-```powershell
-.\windows\build.ps1
-```
-
-The script configures an x64 build, builds Release, and runs the native command and layout tests. The output is:
-
-```text
-windows\build\Release\Island.exe
-```
-
-Alternatively, run the commands yourself:
-
-```powershell
-cmake -S windows -B windows/build -A x64
-cmake --build windows/build --config Release
-ctest --test-dir windows/build -C Release --output-on-failure
-```
-
-To run the Windows GUI smoke test manually, first exit any running Island instance, then run:
-
-```powershell
-.\tests\native\smoke.ps1 -ExePath .\windows\build\Release\Island.exe
-```
-
-The smoke test checks that both native windows appear, that the island expands, and that the app exits. It does not exercise the microphone, real battery hardware, or media playback. The [Windows desktop workflow](.github/workflows/windows.yml) builds and runs these checks on Windows, then uploads a portable artifact when the job succeeds.
-
-For the platform-independent command and layout tests on a machine with a C++17 compiler:
-
-```sh
-c++ -std=c++17 -O2 -DNDEBUG tests/native/logic_test.cpp windows/commands.cpp windows/layout.cpp -o island-logic-test
-./island-logic-test
-```
+JARVIS is a **small local command interface, not general-purpose AI**. The media controls do not retrieve track information or verify playback state. Both “play” and “pause” send the same Windows play/pause **toggle**.
 
 ## Troubleshooting
 
-- **JARVIS says voice is unavailable:** Check Windows microphone permissions, the default microphone, and whether a compatible SAPI recognizer is installed and configured. Click the core to retry. Media controls do not require speech recognition.
-- **The battery shows `--`:** Windows could not provide a battery percentage, or the device reports no battery. This is normal on many desktop PCs.
-- **Media buttons do nothing or affect the wrong player:** Open a compatible media player and try again. Windows decides which application receives the media keys.
-- **The shortcut does nothing:** Another app may already use `Ctrl+Alt+J`. Use the JARVIS core or tray menu instead.
-- **A second copy will not open:** Island may already be running. Find its system-tray icon, show JARVIS, or exit the existing instance.
+- **Voice is unavailable:** Check the default microphone, Windows microphone permissions, and the installed Windows speech recognizer. Click the core to retry.
+- **Battery shows `--`:** Windows could not provide a reading, or the device reports no battery.
+- **Media controls do nothing:** Open a player that responds to Windows media keys; Windows chooses which app receives them.
+- **Shortcut does nothing:** Another application may have registered `Ctrl+Alt+J`; use the core or tray menu.
+- **The app does not launch:** Check the output from `mvn javafx:run`, or use `Run-Island-Debug.cmd` if it is included in your preview ZIP.
 
 ## Repository layout
 
 | Path | Purpose |
 | --- | --- |
-| `windows/` | Primary native app, resources, CMake project, build script, and inactive CI template |
-| `tests/native/` | Portable command/layout tests and a Windows GUI smoke test |
-| `downloads/` | Portable Windows ZIP for users who do not want to build from source |
-| `src/`, `desktop/`, `public/` | Earlier optional browser/Electron design prototype; not required by the Windows app |
-
-Generated build directories are ignored. The older prototype can be developed separately with Node.js, but it is not the Windows deliverable.
+| `javafx/src/main/resources/com/islandfx/*.fxml` | Island and JARVIS FXML views |
+| `javafx/src/main/resources/com/islandfx/island.css` | JavaFX styling |
+| `javafx/src/main/java/com/islandfx/` | Controllers, app lifecycle, command logic, and Windows integration |
+| `javafx/src/test/` | JUnit logic tests and UI/preview harnesses |
+| `javafx/build-windows.ps1` | Maven build and optional `jpackage` app-image script |
+| `javafx/launcher/` | Small optional native launcher for a bundled Java runtime; the interface remains JavaFX/FXML |
+| `docs/previews/` | JavaFX-rendered preview images with simulated values |
+| `windows/`, `downloads/` | Earlier C++/Win32 implementation and its legacy executable |
+| `src/`, `desktop/`, `public/` | Earlier optional browser/Electron prototype, not the Windows deliverable |

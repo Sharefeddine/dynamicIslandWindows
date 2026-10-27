@@ -2,7 +2,8 @@
 node_modules/
 dist/
 
-# Native Windows build output
+# JavaFX and legacy native build output
+javafx/target/
 windows/build/
 windows/out/
 island-logic-test

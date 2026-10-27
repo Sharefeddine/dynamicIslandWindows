@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Arc?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.shape.SVGPath?>
+
+<VBox fx:id="root" prefWidth="310" minWidth="310" maxWidth="310" spacing="0"
+      styleClass="jarvis-shell" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.islandfx.JarvisController" stylesheets="@island.css">
+  <children>
+    <HBox fx:id="dragHandle" alignment="CENTER_LEFT" spacing="8" styleClass="core-header" prefHeight="42">
+      <children>
+        <SVGPath content="M 6 0 L 7.5 4.5 L 12 6 L 7.5 7.5 L 6 12 L 4.5 7.5 L 0 6 L 4.5 4.5 Z" styleClass="star-small"/>
+        <Label text="AI CORE" styleClass="eyebrow,core-eyebrow"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Circle fx:id="statusDot" radius="3" styleClass="status-dot"/>
+        <Label fx:id="statusLabel" text="STANDBY" styleClass="eyebrow,status-caption"/>
+        <Button fx:id="closeButton" onAction="#hide" text="×" styleClass="close-button" accessibleText="Hide JARVIS">
+          <tooltip><Tooltip text="Hide JARVIS (stops listening)"/></tooltip>
+        </Button>
+      </children>
+    </HBox>
+    <StackPane fx:id="orb" prefHeight="173" minHeight="173" onMouseClicked="#toggleListening" styleClass="orb-area">
+      <children>
+        <Circle radius="79" styleClass="orb-halo"/>
+        <Circle radius="75" styleClass="orb-ring-outer"/>
+        <Circle radius="64" styleClass="orb-ring"/>
+        <Arc fx:id="orbit" radiusX="64" radiusY="64" startAngle="15" length="55" type="OPEN" styleClass="orbit-arc"/>
+        <Circle radius="51" styleClass="orb-center"/>
+        <Circle radius="39" styleClass="orb-ring-inner"/>
+        <Circle radius="24" styleClass="orb-ring-inner"/>
+        <SVGPath content="M 20 0 L 24 15 L 40 20 L 24 25 L 20 40 L 16 25 L 0 20 L 16 15 Z" styleClass="orb-star"/>
+      </children>
+    </StackPane>
+    <VBox alignment="CENTER" spacing="4" styleClass="core-name">
+      <children><Label text="J A R V I S" styleClass="jarvis-title"/><Label text="YOUR PERSONAL ASSISTANT" styleClass="eyebrow,core-subtitle"/></children>
+    </VBox>
+    <Region prefHeight="1" styleClass="horizontal-rule"/>
+    <HBox alignment="CENTER_LEFT" spacing="10" styleClass="core-footer">
+      <children>
+        <StackPane minWidth="32" prefWidth="32" minHeight="32" prefHeight="32" styleClass="listening-badge">
+          <children><Circle radius="3.5" styleClass="listening-dot"/></children>
+        </StackPane>
+        <VBox spacing="3" HBox.hgrow="ALWAYS">
+          <children><Label fx:id="voiceLabel" text="Ready to listen" styleClass="voice-state"/><Label fx:id="messageLabel" text="Microphone is off" styleClass="voice-message" maxWidth="175"/></children>
+        </VBox>
+        <Button fx:id="micButton" onAction="#toggleListening" styleClass="mic-button" accessibleText="Start listening">
+          <graphic><SVGPath content="M 6 0 C 4 0 3 1.5 3 3.5 V 8 C 3 10 4 11.5 6 11.5 C 8 11.5 9 10 9 8 V 3.5 C 9 1.5 8 0 6 0 Z M 0 7 H 1.5 C 1.5 10.5 3.2 13 6 13 C 8.8 13 10.5 10.5 10.5 7 H 12 C 12 11 10 14 6.8 14.4 V 16 H 9 V 17 H 3 V 16 H 5.2 V 14.4 C 2 14 0 11 0 7 Z"/></graphic>
+          <tooltip><Tooltip text="Start or stop listening"/></tooltip>
+        </Button>
+      </children>
+    </HBox>
+  </children>
+</VBox>
