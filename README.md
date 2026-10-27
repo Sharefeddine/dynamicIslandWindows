@@ -26,7 +26,16 @@ These images are rendered from the actual FXML views on a simulated desktop. **7
 - 64-bit Windows 10 or 11.
 - A compatible media application to respond to Windows media keys.
 - For voice: a microphone, Windows desktop-app microphone permission, and a compatible installed Windows speech recognizer. The supported command phrases are in English.
-- To **build from source**: JDK 17 or newer, Maven 3.8 or newer, and network access to Maven Central. A packaged app image includes its own Java runtime.
+- To **build from source**: JDK 17 or newer and network access to Maven Central. Use IntelliJ IDEA's bundled Maven or install Maven 3.8 or newer for command-line builds. A packaged app image includes its own Java runtime.
+
+## Open in IntelliJ IDEA
+
+1. Choose **File → Open** and select the repository root (the folder containing `pom.xml`). Trust the project if prompted and allow IDEA to import the Maven project and download its dependencies.
+2. In **File → Project Structure**, select a JDK 17 or newer as the project SDK. If necessary, select the same JDK for the Maven runner in IDEA's Maven settings.
+3. Select the shared **Island JavaFX** run configuration and click **Run**. Select **Island Tests** to run the JUnit tests. The configurations are stored in `.run/` and use Maven, so no machine-specific JavaFX SDK path or VM options are required.
+4. The JavaFX views are `src/main/resources/com/islandfx/island.fxml` and `jarvis.fxml`; the Java controllers are in `src/main/java/com/islandfx/`.
+
+The project is designed for IDEA's Maven import; the IDE setup and Windows-specific features have not yet been tested on Windows.
 
 ## Run or build on Windows
 
@@ -35,19 +44,19 @@ A cross-built JavaFX preview ZIP may be supplied separately with this project. E
 To run directly from source, open PowerShell in the repository root:
 
 ```powershell
-mvn -f javafx/pom.xml clean verify
-mvn -f javafx/pom.xml javafx:run
+mvn clean verify
+mvn javafx:run
 ```
 
 To create a portable Windows app image with `Island.exe` and its own Java runtime, use a full JDK with `jpackage`:
 
 ```powershell
-.\javafx\build-windows.ps1 -Package
+.\build-windows.ps1 -Package
 ```
 
-The result is `javafx\target\package\Island\Island.exe`. Keep the whole `Island` folder together when moving it. This packaging script has not yet been run on Windows. `mvn clean verify` runs the JUnit logic tests; the JavaFX UI smoke harnesses in `javafx/src/test/` were also run headlessly in the development environment.
+The result is `target\package\Island\Island.exe`. Keep the whole `Island` folder together when moving it. This packaging script has not yet been run on Windows. `mvn clean verify` runs the JUnit logic tests; the JavaFX UI smoke harnesses in `src/test/` were also run headlessly in the development environment.
 
-**Important:** `downloads/Island-Windows-x64.zip` is the earlier C++/Win32 build, not this JavaFX implementation. It is retained only as a legacy reference; do not use it to evaluate the JavaFX version.
+**Important:** `old/downloads/Island-Windows-x64.zip` is the earlier C++/Win32 build, not this JavaFX implementation. It is retained only as a legacy reference; do not use it to evaluate the JavaFX version.
 
 ## Controls
 
@@ -88,12 +97,13 @@ JARVIS is a **small local command interface, not general-purpose AI**. The media
 
 | Path | Purpose |
 | --- | --- |
-| `javafx/src/main/resources/com/islandfx/*.fxml` | Island and JARVIS FXML views |
-| `javafx/src/main/resources/com/islandfx/island.css` | JavaFX styling |
-| `javafx/src/main/java/com/islandfx/` | Controllers, app lifecycle, command logic, and Windows integration |
-| `javafx/src/test/` | JUnit logic tests and UI/preview harnesses |
-| `javafx/build-windows.ps1` | Maven build and optional `jpackage` app-image script |
-| `javafx/launcher/` | Small optional native launcher for a bundled Java runtime; the interface remains JavaFX/FXML |
+| `pom.xml` | Root Maven project; open this folder directly in IntelliJ IDEA |
+| `.run/` | Shared IntelliJ IDEA run and test configurations |
+| `src/main/resources/com/islandfx/*.fxml` | Island and JARVIS FXML views |
+| `src/main/resources/com/islandfx/island.css` | JavaFX styling |
+| `src/main/java/com/islandfx/` | Controllers, app lifecycle, command logic, and Windows integration |
+| `src/test/` | JUnit logic tests and UI/preview harnesses |
+| `build-windows.ps1` | Maven build and optional `jpackage` app-image script |
+| `launcher/` | Small optional native launcher for a bundled Java runtime; the interface remains JavaFX/FXML |
 | `docs/previews/` | JavaFX-rendered preview images with simulated values |
-| `windows/`, `downloads/` | Earlier C++/Win32 implementation and its legacy executable |
-| `src/`, `desktop/`, `public/` | Earlier optional browser/Electron prototype, not the Windows deliverable |
+| `old/` | Earlier C++/Win32 and browser/Electron prototypes, including their tests and the old executable |

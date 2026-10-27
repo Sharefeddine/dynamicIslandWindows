@@ -1,11 +1,14 @@
-# Optional browser/Electron prototype
+# Maven and IntelliJ IDEA local files
+/target/
+/out/
+.idea/
+*.iml
+
+# Legacy browser/Electron and native build output
 node_modules/
 dist/
-
-# JavaFX and legacy native build output
-javafx/target/
-windows/build/
-windows/out/
+/old/windows/build/
+/old/windows/out/
 island-logic-test
 
 .DS_Store

@@ -1,0 +1,33 @@
+name: Windows desktop
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure native Windows app
+        run: cmake -S old/windows -B old/windows/build -A x64
+      - name: Build
+        run: cmake --build old/windows/build --config Release
+      - name: Test commands and layout
+        run: ctest --test-dir old/windows/build -C Release --output-on-failure
+      - name: Smoke-test native windows
+        shell: pwsh
+        run: ./old/tests/native/smoke.ps1 -ExePath old/windows/build/Release/Island.exe
+      - name: Prepare portable package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path old/windows/build/artifact -Force | Out-Null
+          Copy-Item old/windows/build/Release/Island.exe old/windows/build/artifact/Island.exe
+          Copy-Item old/README.md old/windows/build/artifact/README.md
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: Island-Windows-x64
+          path: old/windows/build/artifact/
+          if-no-files-found: error
