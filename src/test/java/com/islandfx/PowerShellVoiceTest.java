@@ -36,22 +36,36 @@ class PowerShellVoiceTest {
 
     @Test void decodesRecognizedSpeechAndReportsErrors() throws Exception {
         FakeProcess child = new FakeProcess();
-        CountDownLatch launched = new CountDownLatch(1), ready = new CountDownLatch(1), phrase = new CountDownLatch(1), error = new CountDownLatch(1), ended = new CountDownLatch(1);
-        AtomicReference<String> result = new AtomicReference<>();
-        try (PowerShellVoice voice = new PowerShellVoice(encoded -> { assertFalse(encoded.isBlank()); launched.countDown(); return child; })) {
+        CountDownLatch launched = new CountDownLatch(1), ready = new CountDownLatch(1), partial = new CountDownLatch(1), phrase = new CountDownLatch(1), rejected = new CountDownLatch(1), error = new CountDownLatch(1), ended = new CountDownLatch(1);
+        AtomicReference<String> result = new AtomicReference<>(), partialText = new AtomicReference<>(), rejectedText = new AtomicReference<>(), errorDetail = new AtomicReference<>();
+        try (PowerShellVoice voice = new PowerShellVoice(encoded -> {
+            String script = new String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_16LE);
+            assertTrue(script.contains("$islandParentPid = "));
+            assertTrue(script.contains("while (-not $parent.HasExited)"));
+            launched.countDown(); return child;
+        })) {
             voice.start(text -> { result.set(text); phrase.countDown(); }, (event, detail) -> {
                 if (event == DeviceServices.VoiceEvent.LISTENING) ready.countDown();
-                if (event == DeviceServices.VoiceEvent.ERROR) error.countDown();
+                if (event == DeviceServices.VoiceEvent.PARTIAL) { partialText.set(detail); partial.countDown(); }
+                if (event == DeviceServices.VoiceEvent.REJECTED) { rejectedText.set(detail); rejected.countDown(); }
+                if (event == DeviceServices.VoiceEvent.ERROR) { errorDetail.set(detail); error.countDown(); }
                 if (event == DeviceServices.VoiceEvent.ENDED) ended.countDown();
             });
             assertTrue(launched.await(2, TimeUnit.SECONDS));
             child.line("ISLAND_READY");
             assertTrue(ready.await(2, TimeUnit.SECONDS));
+            child.line("ISLAND_PARTIAL:" + Base64.getEncoder().encodeToString("next".getBytes(StandardCharsets.UTF_8)));
+            assertTrue(partial.await(2, TimeUnit.SECONDS));
+            assertEquals("next", partialText.get());
             child.line("ISLAND_TEXT:" + Base64.getEncoder().encodeToString("next track".getBytes(StandardCharsets.UTF_8)));
             assertTrue(phrase.await(2, TimeUnit.SECONDS));
             assertEquals("next track", result.get());
-            child.line("ISLAND_ERROR");
+            child.line("ISLAND_REJECTED:" + Base64.getEncoder().encodeToString("play music".getBytes(StandardCharsets.UTF_8)));
+            assertTrue(rejected.await(2, TimeUnit.SECONDS));
+            assertEquals("play music", rejectedText.get());
+            child.line("ISLAND_ERROR:" + Base64.getEncoder().encodeToString("No speech engine installed".getBytes(StandardCharsets.UTF_8)));
             assertTrue(error.await(2, TimeUnit.SECONDS));
+            assertEquals("No speech engine installed", errorDetail.get());
             child.finish();
             assertFalse(ended.await(200, TimeUnit.MILLISECONDS), "an error should not also report normal completion");
         }

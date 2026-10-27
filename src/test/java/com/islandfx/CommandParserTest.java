@@ -9,6 +9,8 @@ class CommandParserTest {
         assertEquals(PLAY_PAUSE, CommandParser.parse("play music"));
         assertEquals(PLAY_PAUSE, CommandParser.parse("Pause the song!"));
         assertEquals(NEXT, CommandParser.parse("play next track"));
+        assertEquals(NEXT, CommandParser.parse("next video"));
+        assertEquals(PLAY_PAUSE, CommandParser.parse("pause youtube"));
         assertEquals(PREVIOUS, CommandParser.parse("previous track"));
         assertEquals(TIME, CommandParser.parse("What time is it?"));
         assertEquals(BATTERY, CommandParser.parse("battery charge"));

@@ -48,7 +48,7 @@ public final class PreviewRenderer {
                 Label watermark = new Label("ISLAND  /  WINDOWS");
                 watermark.setLayoutX(54); watermark.setLayoutY(54);
                 watermark.setStyle("-fx-text-fill: rgba(196,225,232,0.30); -fx-font-family: 'Segoe UI'; -fx-font-size: 11px; -fx-font-weight: bold;");
-                Label caption = new Label("JAVAFX PREVIEW  ·  SAMPLE BATTERY & VOICE STATE");
+                Label caption = new Label("JAVAFX PREVIEW  ·  SAMPLE MEDIA, BATTERY & VOICE STATES");
                 caption.setLayoutX(54); caption.setLayoutY(835);
                 caption.setStyle("-fx-text-fill: rgba(190,221,229,0.56); -fx-font-family: 'Segoe UI'; -fx-font-size: 10px; -fx-font-weight: bold;");
                 desktop.getChildren().addAll(glow, drift1, drift2, watermark, caption);
@@ -64,9 +64,15 @@ public final class PreviewRenderer {
                 Stage stage = new Stage(); stage.setScene(scene); stage.show();
 
                 model.setPreviewSample(72, false);
+                model.mediaInfoProperty().set(MediaInfo.session(MediaInfo.Playback.PLAYING,
+                        "A sample YouTube video", "Example channel", "chrome.exe"));
+                model.submitCommand("battery");
                 snapshot(scene, desktop, directory.resolve("island-compact.png"));
                 model.expandedProperty().set(true);
                 model.setPreviewSample(72, true);
+                model.inputSourceProperty().set("HEARD");
+                model.lastInputProperty().set("next video");
+                model.responseProperty().set("Sent next to Windows.");
                 snapshot(scene, desktop, directory.resolve("island-expanded.png"));
                 stage.hide();
                 System.out.println("Rendered JavaFX FXML previews in " + directory.toAbsolutePath());

@@ -15,18 +15,23 @@ final class PowerShellVoice implements AutoCloseable {
     private static final String SCRIPT = """
         $ErrorActionPreference = 'Stop'
         $recognizer = $null
+        $parent = $null
         try {
+            $parent = [System.Diagnostics.Process]::GetProcessById([int]$islandParentPid)
             Add-Type -AssemblyName System.Speech
             $recognizer = New-Object System.Speech.Recognition.SpeechRecognitionEngine
             $grammar = New-Object System.Speech.Recognition.DictationGrammar
             $recognizer.LoadGrammar($grammar)
             $recognizer.SetInputToDefaultAudioDevice()
             Register-ObjectEvent -InputObject $recognizer -EventName SpeechRecognized -SourceIdentifier island-recognized | Out-Null
+            Register-ObjectEvent -InputObject $recognizer -EventName SpeechHypothesized -SourceIdentifier island-partial | Out-Null
+            Register-ObjectEvent -InputObject $recognizer -EventName SpeechRecognitionRejected -SourceIdentifier island-rejected | Out-Null
             Register-ObjectEvent -InputObject $recognizer -EventName RecognizeCompleted -SourceIdentifier island-ended | Out-Null
+            if ($parent.HasExited) { return }
             $recognizer.RecognizeAsync([System.Speech.Recognition.RecognizeMode]::Multiple)
             [Console]::WriteLine('ISLAND_READY')
             [Console]::Out.Flush()
-            while ($true) {
+            while (-not $parent.HasExited) {
                 $event = Wait-Event -Timeout 2
                 if ($null -eq $event) { continue }
                 if ($event.SourceIdentifier -eq 'island-recognized') {
@@ -36,16 +41,32 @@ final class PowerShellVoice implements AutoCloseable {
                         [Console]::WriteLine('ISLAND_TEXT:' + $encoded)
                         [Console]::Out.Flush()
                     }
+                } elseif ($event.SourceIdentifier -eq 'island-partial') {
+                    $text = $event.SourceEventArgs.Result.Text
+                    if ($text) {
+                        $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($text))
+                        [Console]::WriteLine('ISLAND_PARTIAL:' + $encoded)
+                        [Console]::Out.Flush()
+                    }
+                } elseif ($event.SourceIdentifier -eq 'island-rejected') {
+                    $text = $event.SourceEventArgs.Result.Text
+                    $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string]$text))
+                    [Console]::WriteLine('ISLAND_REJECTED:' + $encoded)
+                    [Console]::Out.Flush()
                 } elseif ($event.SourceIdentifier -eq 'island-ended') {
                     throw 'Speech input ended'
                 }
                 Remove-Event -EventIdentifier $event.EventIdentifier
             }
         } catch {
-            [Console]::WriteLine('ISLAND_ERROR')
+            $reason = [string]($_.Exception.GetBaseException().Message)
+            if (-not $reason) { $reason = 'Check microphone and Windows speech' }
+            $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($reason))
+            [Console]::WriteLine('ISLAND_ERROR:' + $encoded)
             [Console]::Out.Flush()
         } finally {
             if ($recognizer) { $recognizer.Dispose() }
+            if ($parent) { $parent.Dispose() }
         }
         """;
     @FunctionalInterface interface ProcessStarter { Process start(String encodedScript) throws IOException; }
@@ -78,7 +99,8 @@ final class PowerShellVoice implements AutoCloseable {
         boolean reportedError = false;
         Process child = null;
         try {
-            String encoded = Base64.getEncoder().encodeToString(SCRIPT.getBytes(StandardCharsets.UTF_16LE));
+            String script = "$islandParentPid = " + ProcessHandle.current().pid() + "\n" + SCRIPT;
+            String encoded = Base64.getEncoder().encodeToString(script.getBytes(StandardCharsets.UTF_16LE));
             child = starter.start(encoded);
             synchronized (lock) {
                 if (id != generation) { child.destroyForcibly(); return; }
@@ -94,9 +116,27 @@ final class PowerShellVoice implements AutoCloseable {
                             String text = new String(Base64.getDecoder().decode(line.substring(12)), StandardCharsets.UTF_8);
                             emit(id, () -> phrase.accept(text));
                         } catch (IllegalArgumentException ignored) { /* Ignore malformed output. */ }
-                    } else if (line.equals("ISLAND_ERROR")) {
+                    } else if (line.startsWith("ISLAND_PARTIAL:")) {
+                        try {
+                            String text = decode(line.substring("ISLAND_PARTIAL:".length()));
+                            emit(id, () -> state.accept(DeviceServices.VoiceEvent.PARTIAL, text));
+                        } catch (IllegalArgumentException ignored) { /* Ignore malformed output. */ }
+                    } else if (line.startsWith("ISLAND_REJECTED:")) {
+                        try {
+                            String text = decode(line.substring("ISLAND_REJECTED:".length()));
+                            emit(id, () -> state.accept(DeviceServices.VoiceEvent.REJECTED, text));
+                        } catch (IllegalArgumentException ignored) { /* Ignore malformed output. */ }
+                    } else if (line.equals("ISLAND_ERROR") || line.startsWith("ISLAND_ERROR:")) {
                         reportedError = true;
-                        emit(id, () -> state.accept(DeviceServices.VoiceEvent.ERROR, "Check microphone and Windows speech"));
+                        String reason = "Check microphone and Windows speech";
+                        if (line.startsWith("ISLAND_ERROR:")) {
+                            try {
+                                String decoded = decode(line.substring("ISLAND_ERROR:".length()));
+                                if (!decoded.isBlank()) reason = decoded;
+                            } catch (IllegalArgumentException ignored) { /* Keep the generic error. */ }
+                        }
+                        final String detail = reason;
+                        emit(id, () -> state.accept(DeviceServices.VoiceEvent.ERROR, detail));
                     }
                 }
             }
@@ -109,6 +149,9 @@ final class PowerShellVoice implements AutoCloseable {
         }
     }
 
+    private static String decode(String encoded) {
+        return new String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8);
+    }
     private void emit(long id, Runnable callback) {
         synchronized (lock) { if (id == generation) callback.run(); }
     }

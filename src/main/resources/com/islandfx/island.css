@@ -15,13 +15,15 @@
 .island-title { -fx-text-fill: #f2fbfc; -fx-font-size: 13px; -fx-font-weight: bold; }
 .eyebrow { -fx-text-fill: #88a6b3; -fx-font-size: 8px; -fx-font-weight: bold; }
 .waveform Rectangle { -fx-fill: #99dce6; }
+.waveform.muted Rectangle { -fx-fill: #4d6a73; }
 .vertical-rule { -fx-background-color: rgba(143, 181, 193, 0.32); }
 .battery-icon { -fx-fill: #a8dfcf; }
 .battery-label { -fx-text-fill: #e8f8f8; -fx-font-size: 12px; -fx-font-weight: bold; -fx-min-width: 37; }
 .chevron { -fx-fill: transparent; -fx-stroke: #91aeb8; -fx-stroke-width: 1.4; -fx-stroke-line-cap: round; -fx-stroke-line-join: round; }
 .media-details { -fx-padding: 8 22 16 22; }
 .accent { -fx-text-fill: #9acfd7; }
-.details-title { -fx-text-fill: #d9ebef; -fx-font-size: 12px; }
+.details-title { -fx-text-fill: #d9ebef; -fx-font-size: 12px; -fx-text-overrun: ellipsis; }
+.details-artist { -fx-text-fill: #91aeb8; -fx-font-size: 10px; -fx-text-overrun: ellipsis; }
 .details-tag { -fx-text-fill: #7f9ca7; -fx-font-size: 8px; -fx-background-color: #162b35; -fx-background-radius: 10; -fx-padding: 5 8 5 8; }
 .transport-row { -fx-padding: 1 0 0 0; }
 .transport { -fx-cursor: hand; -fx-border-width: 0; -fx-padding: 0; }
@@ -70,3 +72,23 @@
 .mic-button:hover { -fx-background-color: #315563; }
 .mic-button.active { -fx-background-color: #a9e1d3; }
 .mic-button.active SVGPath { -fx-fill: #133733; }
+.command-panel { -fx-padding: 12 15 15 15; }
+.command-caption { -fx-text-fill: #b1d1d7; -fx-font-size: 9px; }
+.input-source { -fx-text-fill: #86b3bd; -fx-font-size: 8px; }
+.transcript-label { -fx-text-fill: #edfafa; -fx-font-size: 11px; -fx-text-overrun: ellipsis; }
+.response-label { -fx-text-fill: #a7d7d0; -fx-font-size: 10px; -fx-text-overrun: ellipsis; }
+.command-field {
+    -fx-background-color: #102b38;
+    -fx-background-radius: 10;
+    -fx-border-color: #365a67;
+    -fx-border-radius: 10;
+    -fx-text-fill: #effafa;
+    -fx-prompt-text-fill: #8aaab5;
+    -fx-highlight-fill: #42717b;
+    -fx-font-size: 11px;
+    -fx-padding: 8 10 8 10;
+}
+.command-field:focused { -fx-border-color: #a4ded8; }
+.send-button { -fx-background-color: #b8e8e1; -fx-background-radius: 10; -fx-text-fill: #17363d; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 8 11 8 11; -fx-cursor: hand; }
+.send-button:hover { -fx-background-color: #dcf8f3; }
+.command-hint { -fx-text-fill: #91aeb8; -fx-font-size: 9px; }

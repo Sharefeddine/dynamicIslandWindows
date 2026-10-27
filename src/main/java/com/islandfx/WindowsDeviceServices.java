@@ -15,10 +15,11 @@ import java.util.OptionalInt;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-/** Uses standard Windows APIs through JNA; no track or playback state is inferred. */
+/** Uses Windows APIs for battery, media keys, media sessions, and opt-in speech. */
 public final class WindowsDeviceServices implements DeviceServices {
     private final boolean windows = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows");
     private final PowerShellVoice speech = new PowerShellVoice();
+    private final PowerShellMedia media = new PowerShellMedia();
 
     @Structure.FieldOrder({"acLineStatus", "batteryFlag", "batteryLifePercent", "systemStatusFlag", "batteryLifeTime", "batteryFullLifeTime"})
     public static final class PowerStatus extends Structure {
@@ -66,6 +67,11 @@ public final class WindowsDeviceServices implements DeviceServices {
         return User32.INSTANCE.SendInput(new DWORD(inputs.length), inputs, inputs[0].size()).intValue() == inputs.length;
     }
 
+    @Override public void startMedia(Consumer<MediaInfo> onChange) {
+        if (!windows) { onChange.accept(MediaInfo.unavailable()); return; }
+        media.start(onChange);
+    }
+
     @Override public void startVoice(Consumer<String> phrase, BiConsumer<VoiceEvent, String> state) {
         if (!windows) {
             state.accept(VoiceEvent.ERROR, "Windows speech is unavailable here");
@@ -74,5 +80,5 @@ public final class WindowsDeviceServices implements DeviceServices {
         speech.start(phrase, state);
     }
     @Override public void stopVoice() { speech.stop(); }
-    @Override public void close() { speech.close(); }
+    @Override public void close() { speech.close(); media.close(); }
 }

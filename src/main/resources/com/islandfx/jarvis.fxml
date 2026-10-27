@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -56,5 +57,30 @@
         </Button>
       </children>
     </HBox>
+    <Region prefHeight="1" styleClass="horizontal-rule"/>
+    <VBox spacing="6" styleClass="command-panel">
+      <children>
+        <HBox alignment="CENTER_LEFT" spacing="8">
+          <children>
+            <Label text="LAST INPUT" styleClass="eyebrow,command-caption"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="inputSourceLabel" text="NO INPUT YET" styleClass="eyebrow,input-source"/>
+          </children>
+        </HBox>
+        <Label fx:id="transcriptLabel" text="Nothing heard or typed yet." wrapText="true" maxWidth="Infinity"
+               minHeight="32" prefHeight="32" maxHeight="32" styleClass="transcript-label"/>
+        <Label fx:id="responseLabel" text="Try help, time, or battery." wrapText="true" maxWidth="Infinity"
+               minHeight="32" prefHeight="32" maxHeight="32" styleClass="response-label"/>
+        <HBox alignment="CENTER_LEFT" spacing="7">
+          <children>
+            <TextField fx:id="commandField" promptText="Type a command..." onAction="#submitCommand"
+                       HBox.hgrow="ALWAYS" minWidth="0" maxWidth="Infinity" accessibleText="Type a JARVIS command"
+                       styleClass="command-field"/>
+            <Button fx:id="sendButton" text="Send" onAction="#submitCommand" styleClass="send-button" accessibleText="Send command"/>
+          </children>
+        </HBox>
+        <Label text="Try: help · time · battery · next" styleClass="command-hint"/>
+      </children>
+    </VBox>
   </children>
 </VBox>

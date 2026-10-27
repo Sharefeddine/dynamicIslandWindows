@@ -11,10 +11,11 @@ public interface DeviceServices extends AutoCloseable {
         final int virtualKey;
         MediaKey(int virtualKey) { this.virtualKey = virtualKey; }
     }
-    enum VoiceEvent { LISTENING, ERROR, ENDED }
+    enum VoiceEvent { LISTENING, PARTIAL, REJECTED, ERROR, ENDED }
 
     OptionalInt batteryPercent();
     boolean sendMediaKey(MediaKey key);
+    default void startMedia(Consumer<MediaInfo> onChange) { onChange.accept(MediaInfo.unavailable()); }
     void startVoice(Consumer<String> phrase, BiConsumer<VoiceEvent, String> state);
     void stopVoice();
     @Override void close();

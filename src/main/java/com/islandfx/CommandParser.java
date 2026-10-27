@@ -16,7 +16,8 @@ public final class CommandParser {
         if (text.isEmpty()) return Intent.UNKNOWN;
         Set<String> words = new HashSet<>(Arrays.asList(text.split(" +")));
         boolean sound = words.contains("music") || words.contains("song") || words.contains("track")
-                || words.contains("audio") || words.contains("media");
+                || words.contains("audio") || words.contains("media") || words.contains("video")
+                || words.contains("youtube");
         if ((words.contains("stop") || words.contains("cancel"))
                 && (words.contains("listening") || words.contains("microphone"))) return Intent.STOP_LISTENING;
         if ((words.contains("next") || words.contains("skip"))
