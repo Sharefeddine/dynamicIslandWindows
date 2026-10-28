@@ -32,6 +32,12 @@ final class TraySupport implements AutoCloseable {
             icon = null;
         }
     }
+    boolean notify(String title, String message) {
+        TrayIcon current = icon;
+        if (current == null) return false;
+        java.awt.EventQueue.invokeLater(() -> current.displayMessage(title, message, TrayIcon.MessageType.INFO));
+        return true;
+    }
     @Override public void close() {
         if (icon != null && SystemTray.isSupported()) SystemTray.getSystemTray().remove(icon);
         icon = null;

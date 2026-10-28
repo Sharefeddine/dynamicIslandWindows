@@ -1,80 +1,210 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Arc?>
+<?import javafx.scene.shape.Circle?>
 <?import javafx.scene.shape.Rectangle?>
 <?import javafx.scene.shape.SVGPath?>
 
-<VBox fx:id="root" prefWidth="390" minWidth="390" maxWidth="390" spacing="0"
-      styleClass="island-shell" xmlns:fx="http://javafx.com/fxml/1"
+<VBox fx:id="root" prefWidth="310" prefHeight="44" minWidth="0" minHeight="0" maxWidth="Infinity" maxHeight="Infinity"
+      spacing="0" styleClass="island-shell" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.islandfx.IslandController" stylesheets="@island.css">
   <children>
-    <HBox fx:id="header" alignment="CENTER_LEFT" spacing="11" prefHeight="64" minHeight="64"
-          styleClass="island-header" focusTraversable="true" onMouseClicked="#toggleExpanded" onKeyPressed="#headerKey">
+    <HBox fx:id="header" alignment="CENTER_LEFT" spacing="9" prefHeight="44" minHeight="44" maxHeight="44"
+          styleClass="island-header" focusTraversable="true" accessibleText="Open or pin the island"
+          onMouseClicked="#toggleExpanded" onKeyPressed="#headerKey">
       <children>
-        <StackPane prefWidth="38" minWidth="38" prefHeight="38" minHeight="38" maxHeight="38" styleClass="music-badge">
-          <children><SVGPath content="M 6 16 C 3 16 2 15 2 13.5 C 2 12 3.5 11 6 11 L 7.5 11 L 7.5 3 L 16 1 L 16 11.5 C 16 13.4 14.5 14.5 12 14.5 C 9.5 14.5 9 13.3 9 12 C 9 10.5 10.5 9.5 13 9.5 L 14.5 9.5 L 14.5 4 L 9 5.4 L 9 13 C 9 14.9 8 16 6 16 Z" styleClass="icon-light"/></children>
+        <StackPane prefWidth="27" minWidth="27" prefHeight="27" minHeight="27" maxHeight="27" styleClass="music-badge">
+          <children><SVGPath content="M 8 2 L 17 0 L 17 12 C 17 14 15 15 13 15 C 11 15 10 14 10 13 C 10 11 12 10 15 10 L 15 4 L 10 5 L 10 14 C 10 16 8 17 6 17 C 4 17 3 16 3 15 C 3 13 5 12 8 12 Z" styleClass="icon-light"/></children>
         </StackPane>
-        <VBox alignment="CENTER_LEFT" spacing="2" HBox.hgrow="ALWAYS" minWidth="0" maxWidth="Infinity">
+        <VBox alignment="CENTER_LEFT" spacing="1" HBox.hgrow="ALWAYS" minWidth="0" maxWidth="Infinity">
           <children>
             <Label fx:id="mediaTitleLabel" text="Music" minWidth="0" maxWidth="Infinity" styleClass="island-title"/>
-            <Label fx:id="mediaSubtitleLabel" text="CONNECTING" minWidth="0" maxWidth="Infinity" styleClass="eyebrow"/>
+            <Label fx:id="mediaSubtitleLabel" text="CONNECTING" minWidth="0" maxWidth="Infinity" styleClass="island-subtitle"/>
           </children>
         </VBox>
-        <HBox fx:id="waveform" alignment="CENTER" spacing="3" styleClass="waveform,muted">
+        <HBox fx:id="waveform" alignment="CENTER" spacing="2" minWidth="20" styleClass="waveform,muted">
           <children>
-            <Rectangle width="2" height="6" arcWidth="2" arcHeight="2"/>
-            <Rectangle width="2" height="11" arcWidth="2" arcHeight="2"/>
-            <Rectangle width="2" height="16" arcWidth="2" arcHeight="2"/>
-            <Rectangle width="2" height="10" arcWidth="2" arcHeight="2"/>
-            <Rectangle width="2" height="6" arcWidth="2" arcHeight="2"/>
+            <Rectangle width="2" height="8" arcWidth="2" arcHeight="2"/>
+            <Rectangle width="2" height="13" arcWidth="2" arcHeight="2"/>
+            <Rectangle width="2" height="17" arcWidth="2" arcHeight="2"/>
+            <Rectangle width="2" height="12" arcWidth="2" arcHeight="2"/>
+            <Rectangle width="2" height="7" arcWidth="2" arcHeight="2"/>
           </children>
         </HBox>
-        <Region minWidth="1" prefHeight="25" maxHeight="25" styleClass="vertical-rule"/>
-        <HBox alignment="CENTER" spacing="7">
+        <HBox alignment="CENTER" spacing="5">
           <children>
-            <SVGPath content="M 2 3 H 18 Q 20 3 20 5 V 12 Q 20 14 18 14 H 2 Q 0 14 0 12 V 5 Q 0 3 2 3 Z M 22 6 H 24 V 11 H 22 Z M 3 6 H 15 V 11 H 3 Z" styleClass="battery-icon"/>
+            <Circle radius="4" styleClass="battery-dot"/>
             <Label fx:id="batteryLabel" text="--" styleClass="battery-label"/>
           </children>
         </HBox>
         <SVGPath fx:id="chevron" content="M 1 2 L 5 6 L 9 2" styleClass="chevron"/>
       </children>
     </HBox>
-    <VBox fx:id="details" visible="false" managed="false" spacing="10" styleClass="media-details">
+    <VBox fx:id="details" visible="false" managed="false" spacing="0" minHeight="252" prefHeight="252" maxHeight="252"
+          styleClass="notch-body">
       <children>
-        <HBox alignment="CENTER_LEFT">
+        <HBox alignment="CENTER_LEFT" spacing="7" prefHeight="28" minHeight="28" maxHeight="28">
           <children>
-            <VBox spacing="3" HBox.hgrow="ALWAYS" minWidth="0" maxWidth="Infinity">
+            <Label fx:id="pageTitleLabel" text="Music" styleClass="page-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="clockLabel" text="--:--" styleClass="clock-label"/>
+            <Button fx:id="previousPageButton" text="‹" onAction="#previousPage" styleClass="page-arrow" accessibleText="Previous section">
+              <tooltip><Tooltip text="Previous section"/></tooltip>
+            </Button>
+            <Button fx:id="nextPageButton" text="›" onAction="#nextPage" styleClass="page-arrow" accessibleText="Next section">
+              <tooltip><Tooltip text="Next section"/></tooltip>
+            </Button>
+          </children>
+        </HBox>
+        <StackPane fx:id="pageStack" VBox.vgrow="ALWAYS" alignment="TOP_CENTER" minHeight="0">
+          <children>
+            <VBox fx:id="musicPage" spacing="8" styleClass="page-content">
               <children>
-                <Label text="WINDOWS MEDIA" styleClass="eyebrow,accent"/>
-                <Label fx:id="detailTitleLabel" text="Checking for media..." minWidth="0" maxWidth="Infinity" styleClass="details-title"/>
-                <Label fx:id="detailArtistLabel" text="Waiting for Windows" minWidth="0" maxWidth="Infinity" styleClass="details-artist"/>
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                  <children>
+                    <StackPane prefWidth="58" minWidth="58" prefHeight="58" minHeight="58" maxHeight="58" styleClass="album-placeholder">
+                      <children><SVGPath content="M 8 2 L 20 0 L 20 15 C 20 18 18 19 15 19 C 12 19 11 18 11 16 C 11 14 13 13 17 13 L 17 5 L 11 6 L 11 17 C 11 20 9 21 6 21 C 3 21 2 20 2 18 C 2 16 4 15 8 15 Z" styleClass="album-note"/></children>
+                    </StackPane>
+                    <VBox spacing="5" HBox.hgrow="ALWAYS" minWidth="0" maxWidth="Infinity">
+                      <children>
+                        <Label fx:id="detailTitleLabel" text="Checking Windows media…" styleClass="track-title" maxWidth="Infinity"/>
+                        <Label fx:id="detailArtistLabel" text="Windows media session" styleClass="track-subtitle" maxWidth="Infinity"/>
+                        <Label fx:id="playbackLabel" text="CHECKING" styleClass="state-tag"/>
+                      </children>
+                    </VBox>
+                  </children>
+                </HBox>
+                <HBox alignment="CENTER" spacing="8">
+                  <children>
+                    <Label fx:id="positionLabel" text="--:--" styleClass="time-label"/>
+                    <ProgressBar fx:id="mediaProgress" progress="0" HBox.hgrow="ALWAYS" maxWidth="Infinity" mouseTransparent="true" styleClass="media-progress" accessibleText="Playback progress, read only"/>
+                    <Label fx:id="durationLabel" text="--:--" styleClass="time-label"/>
+                  </children>
+                </HBox>
+                <HBox alignment="CENTER" spacing="21" styleClass="transport-row">
+                  <children>
+                    <Button fx:id="previousTrackButton" onAction="#previous" styleClass="transport,transport-secondary" accessibleText="Previous track">
+                      <graphic><SVGPath content="M 1 1 H 3 V 15 H 1 Z M 13 1 L 4 8 L 13 15 Z"/></graphic>
+                      <tooltip><Tooltip text="Previous track"/></tooltip>
+                    </Button>
+                    <Button fx:id="playPauseButton" onAction="#playPause" styleClass="transport,transport-primary" accessibleText="Play or pause">
+                      <graphic><SVGPath fx:id="playPauseIcon" content="M 2 0 L 14 8 L 2 16 Z"/></graphic>
+                      <tooltip><Tooltip text="Play / pause"/></tooltip>
+                    </Button>
+                    <Button fx:id="nextTrackButton" onAction="#next" styleClass="transport,transport-secondary" accessibleText="Next track">
+                      <graphic><SVGPath content="M 1 1 L 10 8 L 1 15 Z M 11 1 H 13 V 15 H 11 Z"/></graphic>
+                      <tooltip><Tooltip text="Next track"/></tooltip>
+                    </Button>
+                  </children>
+                </HBox>
               </children>
             </VBox>
-            <Label fx:id="playbackLabel" text="CHECKING" styleClass="details-tag"/>
+            <HBox fx:id="focusPage" visible="false" managed="false" spacing="18" alignment="CENTER_LEFT" styleClass="page-content">
+              <children>
+                <StackPane prefWidth="96" minWidth="96" prefHeight="96" minHeight="96">
+                  <children>
+                    <Circle radius="41" styleClass="focus-ring-track"/>
+                    <Arc fx:id="focusArc" radiusX="41" radiusY="41" startAngle="90" length="0" type="OPEN" styleClass="focus-ring"/>
+                    <Label text="◷" styleClass="focus-symbol"/>
+                  </children>
+                </StackPane>
+                <VBox spacing="5" HBox.hgrow="ALWAYS" alignment="CENTER_LEFT">
+                  <children>
+                    <Label fx:id="focusTimeLabel" text="25:00" styleClass="focus-time"/>
+                    <Label fx:id="focusStatusLabel" text="Ready when you are" styleClass="section-subtitle"/>
+                    <HBox spacing="6" alignment="CENTER_LEFT" styleClass="button-row">
+                      <children>
+                        <Button fx:id="breakButton" text="Break" onAction="#selectBreak" styleClass="pill-button"/>
+                        <Button fx:id="focusStartButton" text="Start" onAction="#toggleFocus" styleClass="pill-button,focus-primary"/>
+                        <Button fx:id="focusButton" text="Focus" onAction="#selectFocus" styleClass="pill-button"/>
+                        <Button fx:id="focusResetButton" text="Reset" onAction="#resetFocus" styleClass="text-button"/>
+                      </children>
+                    </HBox>
+                  </children>
+                </VBox>
+              </children>
+            </HBox>
+            <VBox fx:id="waterPage" visible="false" managed="false" spacing="8" styleClass="page-content">
+              <children>
+                <HBox alignment="CENTER_LEFT" spacing="8">
+                  <children>
+                    <Label fx:id="waterTotalLabel" text="0" styleClass="water-total"/>
+                    <Label fx:id="waterGoalLabel" text="/ 2000 ml today" styleClass="section-subtitle"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="waterReminderButton" text="Reminders off" onAction="#toggleWaterReminder" styleClass="pill-button,water-reminder"/>
+                  </children>
+                </HBox>
+                <ProgressBar fx:id="waterProgress" progress="0" maxWidth="Infinity" styleClass="water-progress" accessibleText="Water goal progress"/>
+                <HBox spacing="7" alignment="CENTER_LEFT">
+                  <children>
+                    <Label text="Goal" styleClass="field-caption"/>
+                    <TextField fx:id="waterGoalField" promptText="2000" prefWidth="68" styleClass="small-field" accessibleText="Daily water goal in milliliters"/>
+                    <Label text="Glass" styleClass="field-caption"/>
+                    <TextField fx:id="glassField" promptText="250" prefWidth="62" styleClass="small-field" accessibleText="Glass size in milliliters"/>
+                    <Label text="ml" styleClass="field-caption"/>
+                    <Button fx:id="waterSaveButton" text="Save" onAction="#saveWaterSettings" styleClass="text-button"/>
+                  </children>
+                </HBox>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                  <children>
+                    <Button fx:id="drinkButton" text="+ 250 ml" onAction="#drink" styleClass="pill-button,water-primary"/>
+                    <Button fx:id="waterResetButton" text="Reset today" onAction="#resetWater" styleClass="pill-button"/>
+                  </children>
+                </HBox>
+              </children>
+            </VBox>
+            <VBox fx:id="shelfPage" visible="false" managed="false" spacing="6" styleClass="page-content">
+              <children>
+                <HBox alignment="CENTER_LEFT" spacing="8">
+                  <children>
+                    <Label text="Drop files here or add shortcuts" styleClass="section-subtitle" HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="addFilesButton" text="+ Add files" onAction="#chooseFiles" styleClass="pill-button"/>
+                  </children>
+                </HBox>
+                <ListView fx:id="shelfList" prefHeight="75" minHeight="40" VBox.vgrow="ALWAYS" styleClass="notch-list" accessibleText="File shelf"/>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                  <children>
+                    <Button fx:id="openFileButton" text="Open" onAction="#openFile" styleClass="pill-button"/>
+                    <Button fx:id="removeFileButton" text="Remove shortcut" onAction="#removeFile" styleClass="text-button"/>
+                    <Label text="Original files stay in place" styleClass="tiny-hint"/>
+                  </children>
+                </HBox>
+              </children>
+            </VBox>
+            <VBox fx:id="tasksPage" visible="false" managed="false" spacing="7" styleClass="page-content">
+              <children>
+                <HBox spacing="6" alignment="CENTER_LEFT">
+                  <children>
+                    <TextField fx:id="taskField" promptText="Add a task…" onAction="#addTask" minWidth="0" HBox.hgrow="ALWAYS" styleClass="small-field" accessibleText="New task"/>
+                    <TextField fx:id="taskTimeField" promptText="HH:mm" prefWidth="68" styleClass="small-field" accessibleText="Optional task reminder time"/>
+                    <Button fx:id="addTaskButton" text="Add" onAction="#addTask" styleClass="pill-button,task-primary"/>
+                  </children>
+                </HBox>
+                <ListView fx:id="taskList" prefHeight="98" minHeight="50" VBox.vgrow="ALWAYS" styleClass="notch-list" accessibleText="Tasks"/>
+                <Label text="Optional reminder time uses your local clock." styleClass="tiny-hint"/>
+              </children>
+            </VBox>
           </children>
-        </HBox>
-        <HBox alignment="CENTER" spacing="21" styleClass="transport-row">
+        </StackPane>
+        <HBox fx:id="navigation" alignment="CENTER" spacing="4" prefHeight="31" minHeight="31" maxHeight="31" styleClass="page-navigation">
           <children>
-            <Button onAction="#previous" styleClass="transport,transport-secondary" accessibleText="Previous track">
-              <graphic><SVGPath content="M 1 1 H 3 V 15 H 1 Z M 13 1 L 4 8 L 13 15 Z"/></graphic>
-              <tooltip><Tooltip text="Previous track"/></tooltip>
-            </Button>
-            <Button onAction="#playPause" styleClass="transport,transport-primary" accessibleText="Play or pause">
-              <graphic><SVGPath content="M 1 0 L 11 7 L 1 14 Z M 14 1 H 16 V 13 H 14 Z M 19 1 H 21 V 13 H 19 Z"/></graphic>
-              <tooltip><Tooltip text="Play / pause"/></tooltip>
-            </Button>
-            <Button onAction="#next" styleClass="transport,transport-secondary" accessibleText="Next track">
-              <graphic><SVGPath content="M 1 1 L 10 8 L 1 15 Z M 11 1 H 13 V 15 H 11 Z"/></graphic>
-              <tooltip><Tooltip text="Next track"/></tooltip>
-            </Button>
+            <Button fx:id="musicTab" text="Music" onAction="#showMusic" styleClass="nav-tab"/>
+            <Button fx:id="focusTab" text="Focus" onAction="#showFocus" styleClass="nav-tab"/>
+            <Button fx:id="waterTab" text="Water" onAction="#showWater" styleClass="nav-tab"/>
+            <Button fx:id="shelfTab" text="Shelf" onAction="#showShelf" styleClass="nav-tab"/>
+            <Button fx:id="tasksTab" text="Tasks" onAction="#showTasks" styleClass="nav-tab"/>
           </children>
         </HBox>
-        <Label text="Media keys are sent to Windows" styleClass="footnote"/>
+        <Label fx:id="noticeLabel" text="Hover to open · click the header to pin" maxWidth="Infinity" minHeight="13" prefHeight="13" maxHeight="13" styleClass="notice-label"/>
       </children>
     </VBox>
   </children>

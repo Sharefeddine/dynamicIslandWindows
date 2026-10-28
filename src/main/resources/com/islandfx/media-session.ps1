@@ -54,8 +54,17 @@ try {
                 $playback = $session.GetPlaybackInfo().PlaybackStatus.ToString()
                 $title = if ($properties) { $properties.Title } else { '' }
                 $artist = if ($properties) { $properties.Artist } else { '' }
+                # Timeline is optional: live streams and some players do not report one.
+                $position = ''; $duration = ''
+                try {
+                    $timeline = $session.GetTimelineProperties()
+                    if ($timeline -and $timeline.EndTime.TotalSeconds -gt $timeline.StartTime.TotalSeconds) {
+                        $duration = [long][Math]::Floor(($timeline.EndTime - $timeline.StartTime).TotalSeconds)
+                        $position = [long][Math]::Max(0, [Math]::Floor(($timeline.Position - $timeline.StartTime).TotalSeconds))
+                    }
+                } catch { $position = ''; $duration = '' }
                 $frame = 'ISLAND_MEDIA|SESSION|' + $playback + '|' + (Encode-Field $title) + '|' +
-                         (Encode-Field $artist) + '|' + (Encode-Field $session.SourceAppUserModelId)
+                         (Encode-Field $artist) + '|' + (Encode-Field $session.SourceAppUserModelId) + '|' + $position + '|' + $duration
             }
         } catch {
             # Sessions may disappear while a browser changes videos; retry on the next poll.

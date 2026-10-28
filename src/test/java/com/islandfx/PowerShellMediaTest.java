@@ -37,6 +37,19 @@ class PowerShellMediaTest {
         assertEquals("Windows media access denied", PowerShellMedia.parseFrame("ISLAND_MEDIA|UNAVAILABLE|" + encode("Windows media access denied")).orElseThrow().detail());
     }
 
+    @Test void acceptsAnOptionalWindowsTimelineWithoutInventingOne() {
+        String base = frame("Playing", "Video", "Channel", "chrome.exe");
+        MediaInfo noTimeline = PowerShellMedia.parseFrame(base).orElseThrow();
+        assertFalse(noTimeline.hasTimeline());
+        MediaInfo timeline = PowerShellMedia.parseFrame(base + "|75|200").orElseThrow();
+        assertTrue(timeline.hasTimeline());
+        assertEquals(75, timeline.positionSeconds());
+        assertEquals(200, timeline.durationSeconds());
+        assertFalse(PowerShellMedia.parseFrame(base + "||").orElseThrow().hasTimeline());
+        assertFalse(PowerShellMedia.parseFrame(base + "|bad|200").orElseThrow().hasTimeline());
+        assertEquals(200, PowerShellMedia.parseFrame(base + "|500|200").orElseThrow().positionSeconds());
+    }
+
     @Test void ignoresMalformedAndOverlongFrames() {
         assertTrue(PowerShellMedia.parseFrame(null).isEmpty());
         assertTrue(PowerShellMedia.parseFrame("powershell diagnostic output").isEmpty());

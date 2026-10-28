@@ -37,6 +37,7 @@ public final class UiSmoke {
     }
     private static FakeDevices devices;
     private static AppModel model;
+    private static CompanionModel companion;
     private static Views.IslandView island;
     private static Views.JarvisView core;
     private static Stage stage;
@@ -50,9 +51,10 @@ public final class UiSmoke {
         try {
             runOnFx(() -> {
                 devices = new FakeDevices(); model = new AppModel(devices);
+                companion = new CompanionModel(new CompanionStore(null), java.time.Clock.systemDefaultZone(), System::nanoTime, (title, message) -> { });
                 try { island = Views.island(); core = Views.jarvis(); }
                 catch (Exception error) { throw new RuntimeException(error); }
-                island.controller().attach(model, () -> { });
+                island.controller().attach(model, companion, () -> { });
                 core.controller().attach(model, () -> { hidden = true; model.stopListening(); });
                 Pane pane = new Pane(island.root(), core.root());
                 stage = new Stage(); stage.setScene(new Scene(pane, 900, 700)); stage.show();
@@ -63,6 +65,33 @@ public final class UiSmoke {
                 check(!details.isVisible() && !details.isManaged(), "island starts compact");
                 model.toggleExpanded();
                 check(details.isVisible() && details.isManaged(), "island expands");
+                ((Button) island.root().lookup("#focusTab")).fire();
+                check(label(island.root(), "#focusTimeLabel").getText().equals("25:00"), "focus section shows a real timer");
+                ((Button) island.root().lookup("#focusStartButton")).fire();
+                check(companion.focusRunningProperty().get(), "focus starts");
+                ((Button) island.root().lookup("#focusStartButton")).fire();
+                check(!companion.focusRunningProperty().get(), "focus pauses");
+                ((Button) island.root().lookup("#waterTab")).fire();
+                ((Button) island.root().lookup("#drinkButton")).fire();
+                check(label(island.root(), "#waterTotalLabel").getText().equals("250"), "water intake updates");
+                ((TextField) island.root().lookup("#waterGoalField")).setText("1800");
+                ((TextField) island.root().lookup("#glassField")).setText("300");
+                ((Button) island.root().lookup("#waterSaveButton")).fire();
+                ((Button) island.root().lookup("#waterReminderButton")).fire();
+                check(companion.waterGoalProperty().get() == 1800 && companion.glassMlProperty().get() == 300,
+                        "water settings update through the UI");
+                check(companion.waterReminderProperty().get(), "water reminders can be enabled");
+                ((Button) island.root().lookup("#tasksTab")).fire();
+                ((TextField) island.root().lookup("#taskField")).setText("Test the island");
+                ((Button) island.root().lookup("#addTaskButton")).fire();
+                check(companion.tasks().size() == 1, "task added through UI");
+                ((Button) island.root().lookup("#shelfTab")).fire();
+                companion.addFiles(List.of(new java.io.File("/tmp/island-test-shortcut")));
+                check(companion.shelf().size() == 1, "shelf stores shortcuts");
+                ((javafx.scene.control.ListView<?>) island.root().lookup("#shelfList")).getSelectionModel().select(0);
+                ((Button) island.root().lookup("#removeFileButton")).fire();
+                check(companion.shelf().isEmpty(), "shelf shortcut can be removed through the UI");
+                ((Button) island.root().lookup("#musicTab")).fire();
                 for (Node node : island.root().lookupAll(".transport")) {
                     Button button = (Button) node;
                     if ("Play or pause".equals(button.getAccessibleText())) button.fire();
@@ -70,6 +99,21 @@ public final class UiSmoke {
                 check(devices.keys.equals(List.of(DeviceServices.MediaKey.PLAY_PAUSE)), "media button sends toggle");
                 model.startMediaMonitoring();
                 devices.onMedia.accept(MediaInfo.session(MediaInfo.Playback.PLAYING, "A YouTube video", "Example channel", "chrome.exe"));
+            });
+            // Let the opening animation finish so the list's real virtualized cells are laid out.
+            Thread.sleep(650);
+            runOnFx(() -> {
+                ((Button) island.root().lookup("#tasksTab")).fire();
+                stage.getScene().getRoot().applyCss(); stage.getScene().getRoot().layout();
+                javafx.scene.control.CheckBox done = (javafx.scene.control.CheckBox) island.root().lookup(".task-check");
+                check(done != null, "task checkbox is rendered");
+                done.fire();
+                check(companion.tasks().get(0).done(), "task completion updates through the UI");
+                Button remove = (Button) island.root().lookup(".task-delete");
+                check(remove != null, "task remove button is rendered");
+                remove.fire();
+                check(companion.tasks().isEmpty(), "task can be removed through the UI");
+                ((Button) island.root().lookup("#musicTab")).fire();
             });
             runOnFx(() -> {
                 check(label(island.root(), "#mediaTitleLabel").getText().equals("A YouTube video"), "compact view shows actual title");
@@ -138,9 +182,9 @@ public final class UiSmoke {
                 ((Button) core.root().lookup("#closeButton")).fire();
                 check(hidden && model.voiceProperty().get() == AppModel.VoiceState.OFF, "hiding core stops mic");
                 check(devices.stopCalls >= 2, "voice worker stopped on request and when hidden");
-                model.close(); stage.hide();
+                island.controller().close(); companion.close(); model.close(); stage.hide();
             });
-            System.out.println("FXML views, typed and heard commands, media sessions, errors, and cleanup passed.");
+            System.out.println("FXML views, animated sections, commands, media sessions, errors, and cleanup passed.");
         } finally { Platform.exit(); }
     }
     private static Label label(Node root, String selector) { return (Label) root.lookup(selector); }

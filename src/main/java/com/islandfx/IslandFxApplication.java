@@ -20,6 +20,8 @@ public final class IslandFxApplication extends Application {
     private Stage islandStage;
     private Stage coreStage;
     private AppModel model;
+    private CompanionModel companion;
+    private IslandController islandController;
     private boolean stopping;
 
     @Override public void start(Stage primary) throws Exception {
@@ -30,6 +32,7 @@ public final class IslandFxApplication extends Application {
         }
         Platform.setImplicitExit(false);
         model = new AppModel(new WindowsDeviceServices());
+        companion = CompanionModel.create(this::notifyUser);
         islandStage = primary;
         coreStage = new Stage();
         configure(islandStage, "Island for Windows");
@@ -38,7 +41,8 @@ public final class IslandFxApplication extends Application {
 
         Views.IslandView island = Views.island();
         Views.JarvisView core = Views.jarvis();
-        island.controller().attach(model, () -> Platform.runLater(this::resizeIsland));
+        islandController = island.controller();
+        islandController.attach(model, companion, this::resizeIsland);
         core.controller().attach(model, this::hideCore);
         core.controller().enableDragging(coreStage);
         islandStage.setScene(new Scene(island.root(), Color.TRANSPARENT));
@@ -54,6 +58,7 @@ public final class IslandFxApplication extends Application {
         model.startBatteryPolling();
         model.startMediaMonitoring();
         tray.install(this::toggleCore, this::toggleVoice, this::shutdown);
+        companion.startTicker();
         hotkey.start(() -> Platform.runLater(() -> { if (!stopping) toggleVoice(); }));
     }
 
@@ -65,16 +70,28 @@ public final class IslandFxApplication extends Application {
     }
     private void placeWindows() {
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
-        OverlayLayout.Position pos = OverlayLayout.position(screen.getMinX(), screen.getMinY(), screen.getWidth(),
-                islandStage.getWidth(), coreStage.getWidth());
+        OverlayLayout.Position pos = OverlayLayout.position(screen.getMinX(), screen.getMinY(), screen.getWidth(), screen.getHeight(),
+                islandStage.getWidth(), IslandController.maximumWidth(), IslandController.maximumHeight(),
+                coreStage.getWidth(), coreStage.getHeight());
         islandStage.setX(pos.islandX()); islandStage.setY(pos.islandY());
         coreStage.setX(pos.coreX()); coreStage.setY(pos.coreY());
     }
     private void resizeIsland() {
-        if (islandStage == null || !islandStage.isShowing()) return;
-        islandStage.sizeToScene();
+        if (islandStage == null || !islandStage.isShowing() || islandStage.getScene() == null) return;
+        javafx.scene.layout.Region root = (javafx.scene.layout.Region) islandStage.getScene().getRoot();
+        double width = root.getPrefWidth(), height = root.getPrefHeight();
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
-        islandStage.setX(screen.getMinX() + Math.max(0, (screen.getWidth() - islandStage.getWidth()) / 2));
+        islandStage.setWidth(width);
+        islandStage.setHeight(height);
+        islandStage.setX(screen.getMinX() + Math.max(0, (screen.getWidth() - width) / 2));
+        islandStage.setY(screen.getMinY());
+    }
+    private void notifyUser(String title, String message) {
+        boolean shown = tray.notify(title, message);
+        if (!shown && model != null) model.expandedProperty().set(true);
+        try {
+            if (!java.awt.GraphicsEnvironment.isHeadless()) java.awt.Toolkit.getDefaultToolkit().beep();
+        } catch (RuntimeException ignored) { /* The visible message remains available. */ }
     }
     private void hideCore() {
         if (model != null) model.stopListening();
@@ -100,6 +117,8 @@ public final class IslandFxApplication extends Application {
         stopping = true;
         hotkey.close();
         tray.close();
+        if (islandController != null) islandController.close();
+        if (companion != null) companion.close();
         if (model != null) model.close();
         instance.close();
         Platform.exit();

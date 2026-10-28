@@ -100,11 +100,16 @@ final class PowerShellMedia implements AutoCloseable {
             try { return Optional.of(MediaInfo.unavailable(decode(fields[2]))); }
             catch (IllegalArgumentException invalid) { return Optional.empty(); }
         }
-        if (fields.length != 6 || !fields[0].equals("ISLAND_MEDIA") || !fields[1].equals("SESSION")) return Optional.empty();
+        if ((fields.length != 6 && fields.length != 8) || !fields[0].equals("ISLAND_MEDIA") || !fields[1].equals("SESSION")) return Optional.empty();
         try {
+            long position = fields.length == 8 ? timelineValue(fields[6]) : -1;
+            long duration = fields.length == 8 ? timelineValue(fields[7]) : -1;
             return Optional.of(MediaInfo.session(MediaInfo.playbackFromWindows(fields[2]),
-                    decode(fields[3]), decode(fields[4]), decode(fields[5])));
+                    decode(fields[3]), decode(fields[4]), decode(fields[5]), position, duration));
         } catch (IllegalArgumentException invalid) { return Optional.empty(); }
+    }
+    private static long timelineValue(String value) {
+        try { return Long.parseLong(value); } catch (NumberFormatException invalid) { return -1; }
     }
     private static String decode(String value) {
         return new String(Base64.getDecoder().decode(value), StandardCharsets.UTF_8);
