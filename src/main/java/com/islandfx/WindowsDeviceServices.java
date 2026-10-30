@@ -3,15 +3,18 @@ package com.islandfx;
 import com.sun.jna.Native;
 import com.sun.jna.Structure;
 import com.sun.jna.platform.win32.BaseTSD.ULONG_PTR;
+import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef.DWORD;
 import com.sun.jna.platform.win32.WinDef.WORD;
 import com.sun.jna.platform.win32.WinUser.INPUT;
 import com.sun.jna.platform.win32.WinUser.KEYBDINPUT;
+import com.sun.jna.platform.win32.WinUser.LASTINPUTINFO;
 import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APIOptions;
 import java.util.Locale;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -48,6 +51,18 @@ public final class WindowsDeviceServices implements DeviceServices {
     static OptionalInt decodeBattery(int flags, int percent) {
         return flags == 255 || (flags & 128) != 0 || percent < 0 || percent > 100
                 ? OptionalInt.empty() : OptionalInt.of(percent);
+    }
+
+    @Override public OptionalLong idleMillis() {
+        if (!windows) return OptionalLong.empty();
+        LASTINPUTINFO last = new LASTINPUTINFO();
+        if (!User32.INSTANCE.GetLastInputInfo(last)) return OptionalLong.empty();
+        return OptionalLong.of(elapsedTicks(Kernel32.INSTANCE.GetTickCount(), last.dwTime));
+    }
+
+    // Both Windows values are 32-bit tick counts; unsigned subtraction handles wraparound.
+    static long elapsedTicks(int current, int last) {
+        return Integer.toUnsignedLong(current - last);
     }
 
     @Override public boolean sendMediaKey(MediaKey key) {

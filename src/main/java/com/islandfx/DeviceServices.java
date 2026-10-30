@@ -1,6 +1,7 @@
 package com.islandfx;
 
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -14,6 +15,8 @@ public interface DeviceServices extends AutoCloseable {
     enum VoiceEvent { LISTENING, PARTIAL, REJECTED, ERROR, ENDED }
 
     OptionalInt batteryPercent();
+    /** Time since the last system input, without reading the input itself. */
+    default OptionalLong idleMillis() { return OptionalLong.empty(); }
     boolean sendMediaKey(MediaKey key);
     default void startMedia(Consumer<MediaInfo> onChange) { onChange.accept(MediaInfo.unavailable()); }
     void startVoice(Consumer<String> phrase, BiConsumer<VoiceEvent, String> state);

@@ -3,6 +3,7 @@ package com.islandfx;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -26,7 +27,9 @@ public final class UiSmoke {
         Consumer<MediaInfo> onMedia;
         BiConsumer<VoiceEvent, String> onVoiceState;
         int stopCalls;
+        long idleMillis = -1;
         public OptionalInt batteryPercent() { return OptionalInt.empty(); }
+        public OptionalLong idleMillis() { return idleMillis < 0 ? OptionalLong.empty() : OptionalLong.of(idleMillis); }
         public boolean sendMediaKey(MediaKey key) { keys.add(key); return true; }
         public void startMedia(Consumer<MediaInfo> onChange) { onMedia = onChange; }
         public void startVoice(Consumer<String> phrase, BiConsumer<VoiceEvent, String> state) {
@@ -61,6 +64,14 @@ public final class UiSmoke {
                 pane.applyCss(); pane.layout();
                 check(label(island.root(), "#batteryLabel").getText().equals("--"), "battery starts unavailable");
                 check(label(core.root(), "#voiceLabel").getText().equals("Ready to listen"), "mic starts off");
+                model.updateMascot(OptionalLong.of(MascotMood.SLEEP_AFTER_MILLIS), System.nanoTime());
+                check(island.root().lookup("#mascotSleepMarks").isVisible(), "idle character shows sleep marks");
+                check(island.root().lookup("#mascotSleepyEyes").isVisible(), "idle character closes its eyes");
+                check(!island.root().lookup("#mascotWavingArm").isVisible(), "sleeping character is not waving");
+                model.noteMascotInteraction();
+                check(island.root().lookup("#mascotWavingArm").isVisible(), "returning user gets a wave");
+                check(!island.root().lookup("#mascotSleepMarks").isVisible(), "sleep marks disappear on return");
+                check(label(island.root(), "#batteryLabel").getText().equals("--"), "mascot keeps the real battery state visible");
                 VBox details = (VBox) island.root().lookup("#details");
                 check(!details.isVisible() && !details.isManaged(), "island starts compact");
                 model.toggleExpanded();
@@ -119,6 +130,14 @@ public final class UiSmoke {
                 check(label(island.root(), "#mediaTitleLabel").getText().equals("A YouTube video"), "compact view shows actual title");
                 check(label(island.root(), "#detailArtistLabel").getText().contains("Example channel"), "expanded view shows artist/channel");
                 check(label(island.root(), "#playbackLabel").getText().equals("PLAYING"), "playback state shown");
+                model.updateMascot(OptionalLong.of(MascotMood.SLEEP_AFTER_MILLIS), System.nanoTime());
+                check(island.root().lookup("#mascotSleepMarks").isVisible(), "mascot can sleep while music plays");
+                check(label(island.root(), "#mediaTitleLabel").getText().equals("A YouTube video"), "sleep does not hide media metadata");
+                check(!island.root().lookup("#waveform").getStyleClass().contains("muted"), "sleep does not pause the media indicator");
+                javafx.event.Event.fireEvent(island.root(), new javafx.scene.input.MouseEvent(javafx.scene.input.MouseEvent.MOUSE_ENTERED,
+                        12, 12, 12, 12, javafx.scene.input.MouseButton.NONE, 0,
+                        false, false, false, false, false, false, false, false, false, false, null));
+                check(island.root().lookup("#mascotWavingArm").isVisible(), "returning to the island wakes the mascot");
                 TextField field = (TextField) core.root().lookup("#commandField");
                 Button send = (Button) core.root().lookup("#sendButton");
                 field.setText("what time is it"); send.fire();
@@ -182,9 +201,18 @@ public final class UiSmoke {
                 ((Button) core.root().lookup("#closeButton")).fire();
                 check(hidden && model.voiceProperty().get() == AppModel.VoiceState.OFF, "hiding core stops mic");
                 check(devices.stopCalls >= 2, "voice worker stopped on request and when hidden");
+                devices.idleMillis = MascotMood.SLEEP_AFTER_MILLIS;
+                model.startIdleMonitoring();
+                check(model.mascotPoseProperty().get() == MascotMood.Pose.SLEEPING, "monitor uses the system idle reading");
+                devices.idleMillis = 0;
+            });
+            Thread.sleep(1200);
+            runOnFx(() -> {
+                check(model.mascotPoseProperty().get() == MascotMood.Pose.WAVING, "idle monitor notices activity and waves");
+                check(island.root().lookup("#mascotWavingArm").isVisible(), "polling changes the actual FXML view");
                 island.controller().close(); companion.close(); model.close(); stage.hide();
             });
-            System.out.println("FXML views, animated sections, commands, media sessions, errors, and cleanup passed.");
+            System.out.println("FXML views, idle companion, animated sections, commands, media sessions, errors, and cleanup passed.");
         } finally { Platform.exit(); }
     }
     private static Label label(Node root, String selector) { return (Label) root.lookup(selector); }

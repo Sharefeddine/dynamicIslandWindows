@@ -69,6 +69,7 @@ public final class IslandController implements AutoCloseable {
     @FXML private HBox header;
     @FXML private VBox details;
     @FXML private HBox waveform;
+    @FXML private MascotView mascotView;
     @FXML private Label batteryLabel, mediaTitleLabel, mediaSubtitleLabel, detailTitleLabel, detailArtistLabel, playbackLabel;
     @FXML private Label positionLabel, durationLabel, pageTitleLabel, clockLabel, noticeLabel;
     @FXML private Label focusTimeLabel, focusStatusLabel, waterTotalLabel, waterGoalLabel;
@@ -101,16 +102,21 @@ public final class IslandController implements AutoCloseable {
         closeDelay.setOnFinished(event -> { if (!pinned && model != null) model.expandedProperty().set(false); });
         root.setOnMouseEntered(event -> {
             closeDelay.stop();
-            if (!suppressHover && model != null) model.expandedProperty().set(true);
+            if (model != null) {
+                model.noteMascotInteraction();
+                if (!suppressHover) model.expandedProperty().set(true);
+            }
         });
         root.setOnMouseExited(event -> {
             suppressHover = false;
             if (!pinned) closeDelay.playFromStart();
         });
         details.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> { pinned = true; closeDelay.stop(); });
+        root.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> { if (model != null) model.noteMascotInteraction(); });
         root.addEventFilter(KeyEvent.KEY_PRESSED, this::navigationKey);
         root.setOnDragEntered(event -> {
             if (event.getDragboard().hasFiles() && model != null) {
+                model.noteMascotInteraction();
                 pinned = true; closeDelay.stop();
                 companion.selectPage(CompanionModel.Page.SHELF);
                 model.expandedProperty().set(true);
@@ -147,6 +153,7 @@ public final class IslandController implements AutoCloseable {
         clockLabel.textProperty().bind(companion.clockTextProperty());
         model.expandedProperty().addListener((unused, before, expanded) -> animateExpanded(expanded));
         model.mediaInfoProperty().addListener((unused, before, info) -> renderMedia(info));
+        model.mascotPoseProperty().addListener((unused, before, pose) -> mascotView.showPose(pose));
         companion.pageProperty().addListener((unused, before, page) -> renderPage(page, true));
         companion.focusModeProperty().addListener((unused, before, value) -> renderFocus());
         companion.focusRemainingProperty().addListener((unused, before, value) -> renderFocus());
@@ -166,6 +173,7 @@ public final class IslandController implements AutoCloseable {
         reveal.set(expanded ? 1 : 0);
         applyReveal(reveal.get());
         renderPage(companion.pageProperty().get(), false);
+        mascotView.showPose(model.mascotPoseProperty().get());
         renderFocus(); renderWater(); renderNotice(); renderMedia(model.mediaInfoProperty().get());
     }
 
@@ -209,6 +217,7 @@ public final class IslandController implements AutoCloseable {
     }
     private void navigationKey(KeyEvent event) {
         if (model == null) return;
+        model.noteMascotInteraction();
         if (event.getCode() == KeyCode.ESCAPE && model.expandedProperty().get()) {
             pinned = false; suppressHover = true; model.expandedProperty().set(false); event.consume();
         } else if (!(event.getTarget() instanceof TextInputControl) && model.expandedProperty().get()) {
@@ -417,5 +426,6 @@ public final class IslandController implements AutoCloseable {
         if (morph != null) morph.stop();
         if (pageFade != null) pageFade.stop();
         for (ScaleTransition bar : bars) bar.stop();
+        mascotView.close();
     }
 }

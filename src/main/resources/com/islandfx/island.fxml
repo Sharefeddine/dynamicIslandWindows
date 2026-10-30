@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?import com.islandfx.MascotView?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
@@ -22,9 +23,7 @@
           styleClass="island-header" focusTraversable="true" accessibleText="Open or pin the island"
           onMouseClicked="#toggleExpanded" onKeyPressed="#headerKey">
       <children>
-        <StackPane prefWidth="27" minWidth="27" prefHeight="27" minHeight="27" maxHeight="27" styleClass="music-badge">
-          <children><SVGPath content="M 8 2 L 17 0 L 17 12 C 17 14 15 15 13 15 C 11 15 10 14 10 13 C 10 11 12 10 15 10 L 15 4 L 10 5 L 10 14 C 10 16 8 17 6 17 C 4 17 3 16 3 15 C 3 13 5 12 8 12 Z" styleClass="icon-light"/></children>
-        </StackPane>
+        <MascotView fx:id="mascotView"/>
         <VBox alignment="CENTER_LEFT" spacing="1" HBox.hgrow="ALWAYS" minWidth="0" maxWidth="Infinity">
           <children>
             <Label fx:id="mediaTitleLabel" text="Music" minWidth="0" maxWidth="Infinity" styleClass="island-title"/>

@@ -6,9 +6,11 @@ A Windows desktop companion with a top-centered Dynamic Island and a separate, d
 
 ## Preview
 
-![Sample JavaFX hover and page animation](docs/previews/island-motion.gif)
+| Opening and pages | Sleeping and waving |
+| --- | --- |
+| ![Sample JavaFX hover and page animation](docs/previews/island-motion.gif) | ![Sample idle companion sleeping and waving](docs/previews/island-mascot.gif) |
 
-The animation above captures the JavaFX opening, page transition and closing with simulated data; it is not a Windows recording.
+These animations capture the JavaFX views with simulated data and idle events; they are not Windows recordings. The companion preview is zoomed in.
 
 | Compact island and JARVIS | Expanded island and JARVIS |
 | --- | --- |
@@ -31,6 +33,7 @@ The controls are rendered from the real FXML on a **simulated desktop**, with sa
 - **Water:** Track glasses toward a configurable daily goal, reset today's total, and optionally receive hourly reminders until the goal is reached.
 - **Shelf:** Drag files onto the island or choose files to save shortcuts. Open a selected file, drag it out, or remove its shortcut without deleting the original.
 - **To-do:** Add, complete and remove tasks. An optional local `HH:mm` time schedules a one-time reminder.
+- **Idle companion:** A little character waves on startup, falls asleep with floating Zs after two minutes of Windows inactivity, and waves when you return. Music and battery information remain visible.
 - **Battery and JARVIS:** Show the Windows battery reading, or `--` if unavailable. JARVIS has typed commands, opt-in speech, a transcript/status display, and a visible response.
 - **Desktop controls:** Always-on-top windows, a system-tray menu where available, an optional `Ctrl+Alt+J` voice shortcut, and a single-instance guard.
 
@@ -88,6 +91,8 @@ The intended output is `target\package\Island\Island.exe`; keep the whole `Islan
 
 The last input in JARVIS is marked **HEARING** for tentative words, **HEARD** for recognized speech, **NOT RECOGNIZED** for rejected speech, or **TYPED** for typed commands. Only recognized speech is executed. “Listening...” is shown when the microphone is active.
 
+The character checks the elapsed time since the last Windows input about once per second. After two minutes it dozes, even if music is playing; keyboard or mouse activity wakes it with a short wave. If Windows cannot report idle time, the character stays awake. It does not capture or store keystrokes, mouse positions or input history. This Windows API still needs testing on a real Windows machine.
+
 ## Local data and reminders
 
 Water settings, today's water total, shelf paths and tasks are saved locally in `%LOCALAPPDATA%\IslandFX\companion.properties` on Windows; if `LOCALAPPDATA` is unavailable, the fallback is `~/.islandfx/companion.properties`. This file is not encrypted and can contain task text and file paths. The shelf stores paths, **not copies**; moving or deleting an original file can make its shortcut unavailable. The shelf and task list each accept up to 200 entries.
@@ -140,4 +145,4 @@ JARVIS is a **limited local command interface, not general-purpose AI**. Both �
 | `docs/previews/`, `docs/suggestions.md` | Sample-data UI renders and future ideas |
 | `old/` | Earlier C++/Win32 and browser/Electron prototypes |
 
-In the development sandbox, Java sources were compiled with ECJ; **21 JUnit tests** passed, as did headless FXML and two-window interaction smokes using simulated devices. This is not a Windows, IntelliJ, Maven lifecycle, real microphone, real media-session or packaging test. Verify those on a Windows machine before relying on the app or its reminders.
+In the development sandbox, Java sources were compiled with ECJ; **26 JUnit tests** passed, as did headless FXML and two-window interaction smokes using simulated devices. This is not a Windows, IntelliJ, Maven lifecycle, real microphone, real media-session or packaging test. Verify those on a Windows machine before relying on the app or its reminders.

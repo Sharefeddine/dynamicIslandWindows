@@ -4,10 +4,14 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -15,6 +19,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.util.Duration;
 
 /** Coordinates UI state without putting background OS reads on the JavaFX thread. */
 public final class AppModel implements AutoCloseable {
@@ -30,17 +35,21 @@ public final class AppModel implements AutoCloseable {
     private final BooleanProperty expanded = new SimpleBooleanProperty(false);
     private final StringProperty battery = new SimpleStringProperty("--");
     private final ObjectProperty<MediaInfo> mediaInfo = new SimpleObjectProperty<>(MediaInfo.loading());
+    private final MascotMood mascot = new MascotMood();
+    private final ObjectProperty<MascotMood.Pose> mascotPose = new SimpleObjectProperty<>(mascot.pose());
     private final ObjectProperty<VoiceState> voice = new SimpleObjectProperty<>(VoiceState.OFF);
     private final StringProperty message = new SimpleStringProperty("Microphone is off");
     private final StringProperty inputSource = new SimpleStringProperty("NO INPUT YET");
     private final StringProperty lastInput = new SimpleStringProperty("Nothing heard or typed yet.");
     private final StringProperty response = new SimpleStringProperty("Try help, time, or battery.");
     private long voiceSession;
+    private Timeline idleTicker;
 
     public AppModel(DeviceServices devices) { this.devices = devices; }
     public BooleanProperty expandedProperty() { return expanded; }
     public StringProperty batteryProperty() { return battery; }
     public ObjectProperty<MediaInfo> mediaInfoProperty() { return mediaInfo; }
+    ObjectProperty<MascotMood.Pose> mascotPoseProperty() { return mascotPose; }
     public ObjectProperty<VoiceState> voiceProperty() { return voice; }
     public StringProperty messageProperty() { return message; }
     public StringProperty inputSourceProperty() { return inputSource; }
@@ -68,6 +77,32 @@ public final class AppModel implements AutoCloseable {
         } catch (RuntimeException | LinkageError failure) {
             mediaInfo.set(MediaInfo.unavailable());
         }
+    }
+
+    /** Poll the system's idle duration, not the contents or location of input. */
+    void startIdleMonitoring() {
+        if (closed.get() || idleTicker != null) return;
+        mascot.greet(System.nanoTime());
+        mascotPose.set(mascot.pose());
+        pollIdle();
+        idleTicker = new Timeline(new KeyFrame(Duration.seconds(1), event -> pollIdle()));
+        idleTicker.setCycleCount(Animation.INDEFINITE);
+        idleTicker.play();
+    }
+    private void pollIdle() {
+        OptionalLong reading;
+        try { reading = devices.idleMillis(); }
+        catch (RuntimeException | LinkageError failure) { reading = OptionalLong.empty(); }
+        updateMascot(reading, System.nanoTime());
+    }
+    // Exposed to package-level tests and preview harnesses for deterministic samples.
+    void updateMascot(OptionalLong idleMillis, long nowNanos) {
+        mascot.sample(idleMillis, nowNanos);
+        mascotPose.set(mascot.pose());
+    }
+    void noteMascotInteraction() {
+        mascot.interact(System.nanoTime());
+        mascotPose.set(mascot.pose());
     }
 
     public void toggleExpanded() { expanded.set(!expanded.get()); }
@@ -188,6 +223,7 @@ public final class AppModel implements AutoCloseable {
     @Override public void close() {
         if (closed.compareAndSet(false, true)) {
             ++voiceSession;
+            if (idleTicker != null) idleTicker.stop();
             devices.stopVoice();
             batteryWorker.shutdownNow();
             devices.close();

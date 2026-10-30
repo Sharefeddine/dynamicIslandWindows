@@ -57,6 +57,7 @@ public final class IslandFxApplication extends Application {
         placeWindows();
         model.startBatteryPolling();
         model.startMediaMonitoring();
+        model.startIdleMonitoring();
         tray.install(this::toggleCore, this::toggleVoice, this::shutdown);
         companion.startTicker();
         hotkey.start(() -> Platform.runLater(() -> { if (!stopping) toggleVoice(); }));
