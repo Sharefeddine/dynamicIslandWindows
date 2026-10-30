@@ -14,7 +14,7 @@ These are suggestions, not features already implemented.
 
 1. **Richer media card:** real artwork and seeking when a player exposes them; use session-specific play and pause rather than only system media-key toggles.
 2. **Focus options:** configurable durations, long breaks, optional automatic cycles and a clear pause/resume policy after sleep or restart.
-3. **Reminders:** repeat schedules, snooze and quiet hours, plus opt-in Windows-scheduled notifications that can work when the app is closed.
+3. **Reminders:** repeating task schedules, snooze and quiet hours, plus opt-in Windows-scheduled notifications that can work when the app is closed.
 4. **To-do and shelf improvements:** edit tasks and due dates, export/backup local data, locate missing files and open their containing folders.
 5. **Speech settings:** select an installed recognizer and language, show an input level and offer adjustable confidence. Add more local commands with confirmation for sensitive actions.
 6. **Windows settings:** optional startup at login, a shortcut editor and per-feature privacy controls.

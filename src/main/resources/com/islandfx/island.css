@@ -78,10 +78,31 @@
 .task-delete { -fx-background-color: transparent; -fx-text-fill: #969ba6; -fx-font-size: 16px; -fx-padding: 0 2 0 5; -fx-cursor: hand; }
 .task-delete:hover { -fx-text-fill: #ff9ca4; }
 .page-navigation { -fx-padding: 1 0 0 0; }
-.nav-tab { -fx-background-color: transparent; -fx-background-radius: 11; -fx-text-fill: #80838d; -fx-font-size: 10px; -fx-padding: 5 10 5 10; -fx-cursor: hand; }
+.nav-tab { -fx-background-color: transparent; -fx-background-radius: 11; -fx-text-fill: #80838d; -fx-font-size: 10px; -fx-padding: 5 7 5 7; -fx-cursor: hand; }
 .nav-tab:hover { -fx-text-fill: white; }
 .nav-tab.active { -fx-background-color: #303139; -fx-text-fill: #fafafa; -fx-font-weight: bold; }
 .notice-label { -fx-text-fill: #858994; -fx-font-size: 9px; -fx-text-overrun: ellipsis; -fx-alignment: center; }
+.avatar-button { -fx-background-color: #252830; -fx-background-radius: 10; -fx-text-fill: #bfc9dd; -fx-font-size: 9px; -fx-padding: 4 7; -fx-cursor: hand; }
+.avatar-button:hover { -fx-background-color: #3a404c; }
+.lyrics-list .list-cell { -fx-padding: 3 8; }
+.lyric-line { -fx-text-fill: #a6aab4; -fx-font-size: 11px; }
+.lyric-line.current { -fx-text-fill: #f7f8ff; -fx-font-weight: bold; }
+.lyrics-list .list-cell.current { -fx-background-color: #292e39; -fx-background-radius: 7; }
+.adhkar-period { -fx-padding: 4 10; -fx-font-size: 11px; }
+.adhkar-period.active { -fx-background-color: #285b4d; -fx-text-fill: #d9ffec; }
+.adhkar-scroll, .adhkar-scroll > .viewport { -fx-background-color: #15171c; -fx-background-radius: 10; }
+.adhkar-scroll .scroll-bar { -fx-background-color: transparent; }
+.adhkar-scroll .scroll-bar .thumb { -fx-background-color: #555962; -fx-background-radius: 5; }
+.adhkar-content { -fx-padding: 8 10; }
+.adhkar-text { -fx-text-fill: #eef7ee; -fx-font-size: 14px; }
+.adhkar-count { -fx-text-fill: #8cd5b0; -fx-font-size: 11px; -fx-font-weight: bold; }
+.adhkar-source { -fx-text-fill: #a9afb2; -fx-font-size: 10px; }
+.reminder-check { -fx-text-fill: #c5c9cf; -fx-font-size: 9px; }
+.reminder-check .box { -fx-background-color: #30333b; -fx-background-radius: 4; -fx-padding: 3; }
+.reminder-check:selected .box { -fx-background-color: #4bc889; }
+.reminder-check:selected .mark { -fx-background-color: #0f261a; }
+.reminder-field { -fx-padding: 5 5; }
+.adhkar-save { -fx-background-color: #295d48; -fx-text-fill: #e0ffec; -fx-padding: 5 8; }
 .island-shell.dragging { -fx-border-color: #75bfff; -fx-border-width: 1.5; -fx-border-radius: 0 0 28 28; }
 
 .jarvis-shell {

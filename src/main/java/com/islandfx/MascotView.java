@@ -5,6 +5,8 @@ import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -18,8 +20,9 @@ import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
 import javafx.util.Duration;
 
-/** Original, lightweight vector companion used inside the JavaFX/FXML island header. */
+/** A 3D companion when supported, with a lightweight vector fallback for software rendering. */
 public final class MascotView extends Pane implements AutoCloseable {
+    private final Group fallback = new Group();
     private final Group awakeEyes = new Group();
     private final Group sleepyEyes = new Group();
     private final Group restingArm = new Group();
@@ -29,6 +32,8 @@ public final class MascotView extends Pane implements AutoCloseable {
     private final Rotate armRotation = new Rotate(0, 28, 28);
     private final Timeline wave;
     private final Timeline sleep;
+    private final Timeline blink;
+    private final Avatar3D avatar3d;
 
     public MascotView() {
         setMinSize(50, 40); setPrefSize(50, 40); setMaxSize(50, 40);
@@ -59,7 +64,17 @@ public final class MascotView extends Pane implements AutoCloseable {
         Text middleZ = new Text(38, 13, "z"); middleZ.setFont(Font.font("System", FontWeight.BOLD, 8)); middleZ.setFill(Color.web("#c3d7ff"));
         Text largeZ = new Text(43, 9, "Z"); largeZ.setFont(Font.font("System", FontWeight.BOLD, 9)); largeZ.setFill(Color.web("#dce7ff"));
         sleepMarks.getChildren().addAll(smallZ, middleZ, largeZ);
-        getChildren().addAll(restingArm, body, neck, face, hair, awakeEyes, sleepyEyes, smile, wavingArm, sleepMarks);
+        fallback.getChildren().addAll(restingArm, body, neck, face, hair, awakeEyes, sleepyEyes, smile, wavingArm);
+        Avatar3D candidate = null;
+        if (Platform.isSupported(ConditionalFeature.SCENE3D)) {
+            try { candidate = new Avatar3D(); }
+            catch (java.io.IOException | RuntimeException | LinkageError unavailable) { /* keep the 2D fallback */ }
+        }
+        avatar3d = candidate;
+        fallback.setVisible(avatar3d == null);
+        getChildren().add(fallback);
+        if (avatar3d != null) getChildren().add(avatar3d);
+        getChildren().add(sleepMarks);
 
         wave = new Timeline(
                 frame(0, armRotation.angleProperty(), 0), frame(180, armRotation.angleProperty(), -25),
@@ -75,12 +90,19 @@ public final class MascotView extends Pane implements AutoCloseable {
                         new KeyValue(sleepMarks.translateYProperty(), -5, Interpolator.EASE_BOTH),
                         new KeyValue(body.scaleYProperty(), 1, Interpolator.EASE_BOTH)));
         sleep.setCycleCount(Animation.INDEFINITE);
+        blink = new Timeline(frame(0, awakeEyes.scaleYProperty(), 1), frame(3300, awakeEyes.scaleYProperty(), 1),
+                frame(3380, awakeEyes.scaleYProperty(), 0.06), frame(3500, awakeEyes.scaleYProperty(), 1));
+        blink.setCycleCount(Animation.INDEFINITE);
         showPose(MascotMood.Pose.AWAKE);
     }
 
+    boolean has3d() { return avatar3d != null; }
+    void setAvatarStyle(CompanionStore.AvatarStyle style) { if (avatar3d != null) avatar3d.setStyle(style); }
+
     void showPose(MascotMood.Pose pose) {
-        wave.stop(); sleep.stop();
-        armRotation.setAngle(0); body.setScaleY(1);
+        wave.stop(); sleep.stop(); blink.stop();
+        armRotation.setAngle(0); body.setScaleY(1); awakeEyes.setScaleY(1);
+        if (avatar3d != null) avatar3d.showPose(pose);
         boolean sleeping = pose == MascotMood.Pose.SLEEPING;
         boolean waving = pose == MascotMood.Pose.WAVING;
         awakeEyes.setVisible(!sleeping); sleepyEyes.setVisible(sleeping);
@@ -88,7 +110,10 @@ public final class MascotView extends Pane implements AutoCloseable {
         sleepMarks.setVisible(sleeping);
         setAccessibleText(sleeping ? "Island companion sleeping" : waving ? "Island companion waving hello" : "Island companion awake");
         if (sleeping) sleep.playFromStart();
-        else if (waving) wave.playFromStart();
+        else {
+            blink.playFromStart();
+            if (waving) wave.playFromStart();
+        }
     }
 
     private static KeyFrame frame(int millis, javafx.beans.value.WritableValue<Number> target, double value) {
@@ -105,5 +130,8 @@ public final class MascotView extends Pane implements AutoCloseable {
         if (stroke != null) { shape.setStroke(Color.web(stroke)); shape.setStrokeWidth(width); shape.setStrokeLineCap(StrokeLineCap.ROUND); }
         return shape;
     }
-    @Override public void close() { wave.stop(); sleep.stop(); }
+    @Override public void close() {
+        wave.stop(); sleep.stop(); blink.stop();
+        if (avatar3d != null) avatar3d.close();
+    }
 }

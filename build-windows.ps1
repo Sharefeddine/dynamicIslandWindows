@@ -21,7 +21,7 @@ try {
         & jpackage --type app-image --name Island --dest $outputDir --input $inputDir `
             --main-jar island-windows.jar --main-class com.islandfx.Launcher --icon $icon `
             --app-version 1.0.0 --vendor 'Island for Windows' `
-            --add-modules 'java.desktop,java.logging,java.xml,java.scripting,java.prefs,java.naming,java.management,jdk.unsupported,jdk.zipfs'
+            --add-modules 'java.desktop,java.net.http,java.logging,java.xml,java.scripting,java.prefs,java.naming,java.management,jdk.unsupported,jdk.zipfs'
         if ($LASTEXITCODE -ne 0) { throw 'jpackage failed.' }
         Write-Host "`nPortable Windows app: $outputDir\Island\Island.exe"
     } else {

@@ -44,6 +44,7 @@ public final class UiSmoke {
     private static Views.IslandView island;
     private static Views.JarvisView core;
     private static Stage stage;
+    private static final List<String> notifications = new ArrayList<>();
     private static boolean hidden;
     private UiSmoke() { }
 
@@ -54,14 +55,27 @@ public final class UiSmoke {
         try {
             runOnFx(() -> {
                 devices = new FakeDevices(); model = new AppModel(devices);
-                companion = new CompanionModel(new CompanionStore(null), java.time.Clock.systemDefaultZone(), System::nanoTime, (title, message) -> { });
+                companion = new CompanionModel(new CompanionStore(null), java.time.Clock.systemDefaultZone(), System::nanoTime,
+                        (title, message) -> notifications.add(title + ": " + message));
                 try { island = Views.island(); core = Views.jarvis(); }
                 catch (Exception error) { throw new RuntimeException(error); }
-                island.controller().attach(model, companion, () -> { });
+                island.controller().attach(model, companion, () -> { }, PreviewData.lyrics());
                 core.controller().attach(model, () -> { hidden = true; model.stopListening(); });
                 Pane pane = new Pane(island.root(), core.root());
                 stage = new Stage(); stage.setScene(new Scene(pane, 900, 700)); stage.show();
                 pane.applyCss(); pane.layout();
+                try (Avatar3D probe = new Avatar3D()) {
+                    probe.setStyle(CompanionStore.AvatarStyle.REALISTIC);
+                    var real = probe.getRoot().lookup("#avatarRealistic3D");
+                    var soft = probe.getRoot().lookup("#avatarStylized3D");
+                    var eyes = probe.getRoot().lookup("#avatarRealisticEyes3D");
+                    var arm = probe.getRoot().lookup("#avatarWavingArm3D");
+                    check(real != null && real.isVisible() && soft != null && !soft.isVisible(), "3D styles switch scene graph nodes");
+                    probe.showPose(MascotMood.Pose.SLEEPING);
+                    check(eyes != null && eyes.getScaleY() < 0.1 && !arm.isVisible() && !probe.isBlinking(), "3D sleeping eyes close");
+                    probe.showPose(MascotMood.Pose.WAVING);
+                    check(arm.isVisible() && eyes.getScaleY() == 1 && probe.isBlinking(), "3D waving wakes the eyes and starts blinking");
+                } catch (java.io.IOException failure) { throw new AssertionError("3D head failed to load", failure); }
                 check(label(island.root(), "#batteryLabel").getText().equals("--"), "battery starts unavailable");
                 check(label(core.root(), "#voiceLabel").getText().equals("Ready to listen"), "mic starts off");
                 model.updateMascot(OptionalLong.of(MascotMood.SLEEP_AFTER_MILLIS), System.nanoTime());
@@ -96,6 +110,21 @@ public final class UiSmoke {
                 ((TextField) island.root().lookup("#taskField")).setText("Test the island");
                 ((Button) island.root().lookup("#addTaskButton")).fire();
                 check(companion.tasks().size() == 1, "task added through UI");
+                ((Button) island.root().lookup("#testNotificationButton")).fire();
+                check(notifications.size() == 1 && notifications.get(0).contains("Test notification"), "task notification test uses the real callback path");
+                ((Button) island.root().lookup("#adhkarTab")).fire();
+                check(label(island.root(), "#adhkarTextLabel").getText().contains("الْحَمْدُ"), "Arabic adhkar displayed");
+                check(label(island.root(), "#adhkarCountLabel").getText().contains("1"), "source repetition count displayed");
+                ((Button) island.root().lookup("#nextDhikrButton")).fire();
+                check(label(island.root(), "#adhkarIndexLabel").getText().startsWith("2 /"), "adhkar browsing works");
+                ((Button) island.root().lookup("#eveningButton")).fire();
+                check(label(island.root(), "#adhkarIndexLabel").getText().startsWith("1 /"), "evening starts at the first entry");
+                ((javafx.scene.control.CheckBox) island.root().lookup("#morningReminderCheck")).setSelected(true);
+                ((TextField) island.root().lookup("#morningTimeField")).setText("07:15");
+                ((Button) island.root().lookup("#saveAdhkarButton")).fire();
+                check(companion.morningReminderProperty().get() && companion.morningTimeProperty().get().toString().equals("07:15"), "adhkar reminder settings work");
+                ((Button) island.root().lookup("#avatarButton")).fire();
+                check(companion.avatarStyleProperty().get() == CompanionStore.AvatarStyle.REALISTIC, "avatar selection changes and is saved");
                 ((Button) island.root().lookup("#shelfTab")).fire();
                 companion.addFiles(List.of(new java.io.File("/tmp/island-test-shortcut")));
                 check(companion.shelf().size() == 1, "shelf stores shortcuts");
@@ -114,6 +143,16 @@ public final class UiSmoke {
             // Let the opening animation finish so the list's real virtualized cells are laid out.
             Thread.sleep(650);
             runOnFx(() -> {
+                ((Button) island.root().lookup("#lyricsTab")).fire();
+                stage.getScene().getRoot().applyCss(); stage.getScene().getRoot().layout();
+                var lyricList = (javafx.scene.control.ListView<?>) island.root().lookup("#lyricsList");
+                check(lyricList.getItems().size() == 3, "asynchronous sample lyrics appear in the actual FXML page");
+                check(label(island.root(), "#lyricsStatusLabel").getText().contains("not supplied"), "missing playback position is explained");
+                check(island.root().lookupAll(".lyric-line").stream().filter(node -> node instanceof Label)
+                        .map(node -> (Label) node).anyMatch(node -> node.getText().contains("صَبَاح") &&
+                                node.getNodeOrientation() == javafx.geometry.NodeOrientation.RIGHT_TO_LEFT), "Arabic lyrics use RTL orientation");
+                ((Button) island.root().lookup("#onlineLyricsButton")).fire();
+                check(!companion.onlineLyricsProperty().get() && lyricList.getItems().isEmpty(), "online lyric lookup can be disabled");
                 ((Button) island.root().lookup("#tasksTab")).fire();
                 stage.getScene().getRoot().applyCss(); stage.getScene().getRoot().layout();
                 javafx.scene.control.CheckBox done = (javafx.scene.control.CheckBox) island.root().lookup(".task-check");
@@ -212,7 +251,7 @@ public final class UiSmoke {
                 check(island.root().lookup("#mascotWavingArm").isVisible(), "polling changes the actual FXML view");
                 island.controller().close(); companion.close(); model.close(); stage.hide();
             });
-            System.out.println("FXML views, idle companion, animated sections, commands, media sessions, errors, and cleanup passed.");
+            System.out.println("FXML views, RTL lyrics, adhkar, reminders, 3D scene state, companion, commands, media, and cleanup passed.");
         } finally { Platform.exit(); }
     }
     private static Label label(Node root, String selector) { return (Label) root.lookup(selector); }

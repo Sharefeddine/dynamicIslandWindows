@@ -35,7 +35,7 @@ public final class PreviewRenderer {
         public void close() { }
     }
     private static final CompanionModel.Page[] PAGES = CompanionModel.Page.values();
-    private static final String[] NAMES = { "island-expanded.png", "island-focus.png", "island-water.png", "island-shelf.png", "island-tasks.png" };
+    private static final String[] NAMES = { "island-expanded.png", "island-focus.png", "island-water.png", "island-shelf.png", "island-tasks.png", "island-lyrics.png", "island-adhkar.png" };
     private PreviewRenderer() { }
 
     public static void main(String[] args) throws Exception {
@@ -55,11 +55,11 @@ public final class PreviewRenderer {
                 Ellipse drift2 = new Ellipse(1170, 970, 760, 330); drift2.setFill(Color.web("#102540", 0.38)); drift2.setRotate(10);
                 Label watermark = new Label("ISLAND  /  WINDOWS"); watermark.setLayoutX(54); watermark.setLayoutY(54);
                 watermark.setStyle("-fx-text-fill: rgba(18,47,73,0.58); -fx-font-family: 'Segoe UI'; -fx-font-size: 11px; -fx-font-weight: bold;");
-                Label caption = new Label("JAVAFX PREVIEW  ·  SAMPLE MEDIA, BATTERY, TASKS & VOICE STATES"); caption.setLayoutX(54); caption.setLayoutY(835);
+                Label caption = new Label("JAVAFX PREVIEW  ·  SIMULATED MEDIA, BATTERY, LYRICS, TASKS & VOICE STATES"); caption.setLayoutX(54); caption.setLayoutY(835);
                 caption.setStyle("-fx-text-fill: rgba(232,242,255,0.68); -fx-font-family: 'Segoe UI'; -fx-font-size: 10px; -fx-font-weight: bold;");
                 desktop.getChildren().addAll(glow, drift1, drift2, watermark, caption);
                 Views.IslandView island = Views.island(); Views.JarvisView core = Views.jarvis();
-                island.controller().attach(model, companion, () -> { }); core.controller().attach(model, () -> { });
+                island.controller().attach(model, companion, () -> { }, PreviewData.lyrics()); core.controller().attach(model, () -> { });
                 Region notch = (Region) island.root();
                 notch.prefWidthProperty().addListener((unused, before, width) -> notch.setLayoutX((1440 - width.doubleValue()) / 2));
                 notch.relocate((1440 - notch.getPrefWidth()) / 2, 0); core.root().relocate(1000, 110);
@@ -70,7 +70,7 @@ public final class PreviewRenderer {
                 model.submitCommand("battery");
                 companion.drink(); companion.drink();
                 companion.addFiles(List.of(Path.of("/sample/Notes.pdf").toFile(), Path.of("/sample/Project.png").toFile()));
-                companion.addTask("Finish a creative project", ""); companion.addTask("Take a short break", "");
+                companion.addTask("Finish a creative project", "17:30"); companion.addTask("Take a short break", "");
                 companion.setTaskDone(companion.tasks().get(1).id(), true);
                 companion.noticeProperty().set("");
                 snapshot(scene, desktop, directory.resolve("island-compact.png"), false);
@@ -104,7 +104,7 @@ public final class PreviewRenderer {
         BufferedImage output = new BufferedImage((int) image.getWidth(), (int) image.getHeight(), BufferedImage.TYPE_INT_ARGB);
         for (int y = 0; y < output.getHeight(); y++) for (int x = 0; x < output.getWidth(); x++) output.setRGB(x, y, pixels.getArgb(x, y));
         // Crop only the desktop image, never redraw or mock the JavaFX controls.
-        BufferedImage saved = detail ? output.getSubimage(450, 0, 540, 320) : output;
+        BufferedImage saved = detail ? output.getSubimage(450, 0, 540, 370) : output;
         ImageIO.write(saved, "png", path.toFile());
     }
 }

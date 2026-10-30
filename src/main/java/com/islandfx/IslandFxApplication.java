@@ -16,6 +16,7 @@ import javafx.stage.StageStyle;
 public final class IslandFxApplication extends Application {
     private final SingleInstance instance = new SingleInstance();
     private final TraySupport tray = new TraySupport();
+    private final WindowsNotifications notifications = new WindowsNotifications();
     private final GlobalHotkey hotkey = new GlobalHotkey();
     private Stage islandStage;
     private Stage coreStage;
@@ -88,11 +89,15 @@ public final class IslandFxApplication extends Application {
         islandStage.setY(screen.getMinY());
     }
     private void notifyUser(String title, String message) {
-        boolean shown = tray.notify(title, message);
-        if (!shown && model != null) model.expandedProperty().set(true);
-        try {
-            if (!java.awt.GraphicsEnvironment.isHeadless()) java.awt.Toolkit.getDefaultToolkit().beep();
-        } catch (RuntimeException ignored) { /* The visible message remains available. */ }
+        Runnable fallback = () -> Platform.runLater(() -> {
+            if (stopping) return;
+            boolean sentToTray = tray.notify(title, message);
+            if (companion != null) companion.noticeProperty().set(title + ": " + message +
+                    (sentToTray ? " · tray fallback" : " · system notification unavailable"));
+            if (!sentToTray && model != null) model.expandedProperty().set(true);
+        });
+        if (WindowsNotifications.isWindows()) notifications.send(title, message, fallback);
+        else fallback.run();
     }
     private void hideCore() {
         if (model != null) model.stopListening();
@@ -117,6 +122,7 @@ public final class IslandFxApplication extends Application {
         if (stopping) return;
         stopping = true;
         hotkey.close();
+        notifications.close();
         tray.close();
         if (islandController != null) islandController.close();
         if (companion != null) companion.close();

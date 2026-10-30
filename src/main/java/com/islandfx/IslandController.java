@@ -23,6 +23,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -30,6 +31,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.Tooltip;
@@ -53,7 +55,7 @@ import javafx.util.Duration;
 /** Controller for the animated notch and its local companion pages. */
 public final class IslandController implements AutoCloseable {
     private static final double COMPACT_WIDTH = 310, COMPACT_HEIGHT = 44;
-    private static final double OPEN_WIDTH = 480, OPEN_HEIGHT = 296, MAX_MORPH = 1.04;
+    private static final double OPEN_WIDTH = 480, OPEN_HEIGHT = 344, MAX_MORPH = 1.04;
     private static final Duration MORPH_DURATION = Duration.millis(520);
 
     static double maximumWidth() { return COMPACT_WIDTH + (OPEN_WIDTH - COMPACT_WIDTH) * MAX_MORPH; }
@@ -73,18 +75,27 @@ public final class IslandController implements AutoCloseable {
     @FXML private Label batteryLabel, mediaTitleLabel, mediaSubtitleLabel, detailTitleLabel, detailArtistLabel, playbackLabel;
     @FXML private Label positionLabel, durationLabel, pageTitleLabel, clockLabel, noticeLabel;
     @FXML private Label focusTimeLabel, focusStatusLabel, waterTotalLabel, waterGoalLabel;
+    @FXML private Label lyricsStatusLabel, lyricsMatchLabel, adhkarIndexLabel, adhkarTextLabel, adhkarCountLabel, adhkarSourceLabel;
     @FXML private SVGPath chevron, playPauseIcon;
     @FXML private Arc focusArc;
     @FXML private ProgressBar mediaProgress, waterProgress;
     @FXML private StackPane pageStack;
-    @FXML private VBox musicPage, waterPage, shelfPage, tasksPage;
+    @FXML private VBox musicPage, waterPage, shelfPage, tasksPage, lyricsPage, adhkarPage;
     @FXML private HBox focusPage;
-    @FXML private Button musicTab, focusTab, waterTab, shelfTab, tasksTab, focusStartButton, waterReminderButton, drinkButton;
-    @FXML private TextField waterGoalField, glassField, taskField, taskTimeField;
+    @FXML private Button musicTab, focusTab, waterTab, shelfTab, tasksTab, lyricsTab, adhkarTab;
+    @FXML private Button focusStartButton, waterReminderButton, drinkButton, avatarButton, morningButton, eveningButton, onlineLyricsButton;
+    @FXML private TextField waterGoalField, glassField, taskField, taskTimeField, morningTimeField, eveningTimeField;
+    @FXML private CheckBox morningReminderCheck, eveningReminderCheck;
+    @FXML private ScrollPane adhkarScroll;
     @FXML private ListView<String> shelfList;
     @FXML private ListView<CompanionStore.Task> taskList;
+    @FXML private ListView<LyricsService.Line> lyricsList;
     private AppModel model;
     private CompanionModel companion;
+    private LyricsModel lyrics;
+    private AdhkarCatalog adhkar;
+    private AdhkarCatalog.Period adhkarPeriod = AdhkarCatalog.Period.MORNING;
+    private int adhkarIndex;
     private Runnable onSizeChanged = () -> { };
     private final DoubleProperty reveal = new SimpleDoubleProperty(0);
     private final PauseTransition closeDelay = new PauseTransition(Duration.millis(450));
@@ -146,9 +157,17 @@ public final class IslandController implements AutoCloseable {
     }
 
     public void attach(AppModel model, CompanionModel companion, Runnable onSizeChanged) {
+        attach(model, companion, onSizeChanged, LyricsModel.create());
+    }
+    // Allows deterministic offline UI tests and previews without contacting a lyrics service.
+    void attach(AppModel model, CompanionModel companion, Runnable onSizeChanged, LyricsModel lyrics) {
         this.model = model;
         this.companion = companion;
+        this.lyrics = lyrics;
         this.onSizeChanged = onSizeChanged;
+        lyrics.setEnabled(companion.onlineLyricsProperty().get());
+        try { adhkar = AdhkarCatalog.load(); }
+        catch (java.io.IOException failure) { companion.noticeProperty().set("Arabic adhkar data could not be loaded."); }
         batteryLabel.textProperty().bind(model.batteryProperty());
         clockLabel.textProperty().bind(companion.clockTextProperty());
         model.expandedProperty().addListener((unused, before, expanded) -> animateExpanded(expanded));
@@ -163,17 +182,35 @@ public final class IslandController implements AutoCloseable {
         companion.waterGoalProperty().addListener((unused, before, value) -> renderWater());
         companion.glassMlProperty().addListener((unused, before, value) -> renderWater());
         companion.waterReminderProperty().addListener((unused, before, value) -> renderWater());
+        companion.avatarStyleProperty().addListener((unused, before, value) -> renderAvatar());
+        companion.onlineLyricsProperty().addListener((unused, before, value) -> renderOnlineLyrics());
+        lyricsStatusLabel.textProperty().bind(lyrics.statusProperty());
+        lyricsMatchLabel.textProperty().bind(lyrics.matchProperty());
+        lyrics.activeIndexProperty().addListener((unused, before, value) -> {
+            lyricsList.refresh();
+            if (value.intValue() >= 0) lyricsList.scrollTo(value.intValue());
+        });
         companion.noticeProperty().addListener((unused, before, value) -> renderNotice());
         companion.storageWarningProperty().addListener((unused, before, value) -> renderNotice());
         configureLists();
         waterGoalField.setText(Integer.toString(companion.waterGoalProperty().get()));
         glassField.setText(Integer.toString(companion.glassMlProperty().get()));
+        morningTimeField.setText(companion.morningTimeProperty().get().format(DateTimeFormatter.ofPattern("HH:mm")));
+        eveningTimeField.setText(companion.eveningTimeProperty().get().format(DateTimeFormatter.ofPattern("HH:mm")));
+        morningReminderCheck.setSelected(companion.morningReminderProperty().get());
+        eveningReminderCheck.setSelected(companion.eveningReminderProperty().get());
+        for (Label label : List.of(adhkarTextLabel, adhkarCountLabel, adhkarSourceLabel)) {
+            // JavaFX mirrors alignment in an RTL node: logical LEFT is the visual right edge.
+            label.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT); label.setAlignment(Pos.CENTER_LEFT);
+            label.prefWidthProperty().bind(adhkarScroll.widthProperty().subtract(42));
+        }
         boolean expanded = model.expandedProperty().get();
         details.setVisible(expanded); details.setManaged(expanded); details.setMouseTransparent(!expanded);
         reveal.set(expanded ? 1 : 0);
         applyReveal(reveal.get());
         renderPage(companion.pageProperty().get(), false);
         mascotView.showPose(model.mascotPoseProperty().get());
+        renderAvatar(); renderDhikr(); renderOnlineLyrics();
         renderFocus(); renderWater(); renderNotice(); renderMedia(model.mediaInfoProperty().get());
     }
 
@@ -227,9 +264,9 @@ public final class IslandController implements AutoCloseable {
     }
 
     private void renderPage(CompanionModel.Page page, boolean animate) {
-        Node[] pages = { musicPage, focusPage, waterPage, shelfPage, tasksPage };
-        Button[] tabs = { musicTab, focusTab, waterTab, shelfTab, tasksTab };
-        String[] titles = { "Music", "Focus timer", "Water reminder", "File shelf", "To-do" };
+        Node[] pages = { musicPage, focusPage, waterPage, shelfPage, tasksPage, lyricsPage, adhkarPage };
+        Button[] tabs = { musicTab, focusTab, waterTab, shelfTab, tasksTab, lyricsTab, adhkarTab };
+        String[] titles = { "Music", "Focus timer", "Water reminder", "File shelf", "To-do", "Lyrics", "أذكار الصباح والمساء" };
         if (pageFade != null) pageFade.stop();
         for (int i = 0; i < pages.length; i++) {
             boolean selected = i == page.ordinal();
@@ -255,9 +292,19 @@ public final class IslandController implements AutoCloseable {
     @FXML private void showWater() { companion.selectPage(CompanionModel.Page.WATER); }
     @FXML private void showShelf() { companion.selectPage(CompanionModel.Page.SHELF); }
     @FXML private void showTasks() { companion.selectPage(CompanionModel.Page.TASKS); }
+    @FXML private void showLyrics() { companion.selectPage(CompanionModel.Page.LYRICS); }
+    @FXML private void showAdhkar() { companion.selectPage(CompanionModel.Page.ADHKAR); }
+    @FXML private void retryLyrics() { lyrics.retry(); }
+    @FXML private void toggleOnlineLyrics() { companion.toggleOnlineLyrics(); }
+    private void renderOnlineLyrics() {
+        boolean enabled = companion.onlineLyricsProperty().get();
+        onlineLyricsButton.setText(enabled ? "Online on" : "Online off");
+        lyrics.setEnabled(enabled);
+    }
 
     private void renderMedia(MediaInfo info) {
         if (info == null) info = MediaInfo.unavailable();
+        if (lyrics != null) lyrics.update(info);
         String title, subtitle, detail, tag;
         boolean isPlaying = info.availability() == MediaInfo.Availability.AVAILABLE && info.playback() == MediaInfo.Playback.PLAYING;
         switch (info.availability()) {
@@ -305,6 +352,64 @@ public final class IslandController implements AutoCloseable {
     @FXML private void previous() { model.media(DeviceServices.MediaKey.PREVIOUS); }
     @FXML private void playPause() { model.media(DeviceServices.MediaKey.PLAY_PAUSE); }
     @FXML private void next() { model.media(DeviceServices.MediaKey.NEXT); }
+
+    private void renderAvatar() {
+        CompanionStore.AvatarStyle style = companion.avatarStyleProperty().get();
+        mascotView.setAvatarStyle(style);
+        String name = style == CompanionStore.AvatarStyle.REALISTIC ? "real" : "soft";
+        avatarButton.setText(mascotView.has3d() ? "3D: " + name : "2D fallback");
+        avatarButton.setTooltip(new Tooltip(mascotView.has3d()
+                ? "Switch 3D companion style (stylized / anatomical head)"
+                : "3D is unavailable here. Click to save a style for a 3D-capable system. Selected: " + name));
+    }
+    @FXML private void toggleAvatar() {
+        companion.selectAvatarStyle(companion.avatarStyleProperty().get() == CompanionStore.AvatarStyle.STYLIZED
+                ? CompanionStore.AvatarStyle.REALISTIC : CompanionStore.AvatarStyle.STYLIZED);
+        if (!mascotView.has3d()) companion.noticeProperty().set("Style saved · using a 2D fallback because 3D is unavailable.");
+    }
+
+    private void renderDhikr() {
+        morningButton.getStyleClass().remove("active"); eveningButton.getStyleClass().remove("active");
+        (adhkarPeriod == AdhkarCatalog.Period.MORNING ? morningButton : eveningButton).getStyleClass().add("active");
+        List<AdhkarCatalog.Entry> entries = adhkar == null ? List.of() : adhkar.forPeriod(adhkarPeriod);
+        if (entries.isEmpty()) {
+            adhkarIndexLabel.setText("—"); adhkarTextLabel.setText("تعذر تحميل الأذكار");
+            adhkarCountLabel.setText(""); adhkarSourceLabel.setText(""); return;
+        }
+        adhkarIndex = Math.floorMod(adhkarIndex, entries.size());
+        AdhkarCatalog.Entry entry = entries.get(adhkarIndex);
+        adhkarIndexLabel.setText((adhkarIndex + 1) + " / " + entries.size());
+        adhkarTextLabel.setText(wrapArabic(entry.text(), 65));
+        String description = entry.countDescription().isBlank() ? "" : " · " + entry.countDescription();
+        adhkarCountLabel.setText("التكرار: " + entry.count() + description);
+        adhkarSourceLabel.setText(entry.source().isBlank() ? "" : wrapArabic("المصدر: " + entry.source(), 65));
+        adhkarScroll.setVvalue(0);
+    }
+    /** Add word-boundary breaks for long Arabic passages in the compact, fixed-width reader. */
+    static String wrapArabic(String text, int limit) {
+        StringBuilder wrapped = new StringBuilder();
+        for (String paragraph : text.split("\\R", -1)) {
+            if (wrapped.length() > 0) wrapped.append('\n');
+            int width = 0;
+            for (String word : paragraph.trim().split("\\s+")) {
+                if (word.isEmpty()) continue;
+                int length = word.codePointCount(0, word.length());
+                if (width > 0 && width + length + 1 > limit) { wrapped.append('\n'); width = 0; }
+                else if (width > 0) { wrapped.append(' '); width++; }
+                wrapped.append(word); width += length;
+            }
+        }
+        return wrapped.toString();
+    }
+    @FXML private void showMorning() { adhkarPeriod = AdhkarCatalog.Period.MORNING; adhkarIndex = 0; renderDhikr(); }
+    @FXML private void showEvening() { adhkarPeriod = AdhkarCatalog.Period.EVENING; adhkarIndex = 0; renderDhikr(); }
+    @FXML private void previousDhikr() { adhkarIndex--; renderDhikr(); }
+    @FXML private void nextDhikr() { adhkarIndex++; renderDhikr(); }
+    @FXML private void saveAdhkar() {
+        companion.applyAdhkarSettings(morningTimeField.getText(), morningReminderCheck.isSelected(),
+                eveningTimeField.getText(), eveningReminderCheck.isSelected());
+    }
+    @FXML private void testNotification() { companion.testNotification(); }
 
     private void renderFocus() {
         int remaining = companion.focusRemainingProperty().get();
@@ -366,6 +471,29 @@ public final class IslandController implements AutoCloseable {
         });
         taskList.setItems(companion.tasks());
         taskList.setCellFactory(list -> new TaskCell());
+        lyricsList.setItems(lyrics.lines());
+        lyricsList.setPlaceholder(placeholder("Lyrics appear here when available online."));
+        lyricsList.setCellFactory(list -> new ListCell<>() {
+            private final Label line = new Label();
+            {
+                line.setWrapText(true); line.getStyleClass().add("lyric-line");
+                line.prefWidthProperty().bind(list.widthProperty().subtract(35));
+                line.setMaxWidth(Double.MAX_VALUE);
+            }
+            @Override protected void updateItem(LyricsService.Line item, boolean empty) {
+                super.updateItem(item, empty);
+                getStyleClass().remove("current"); line.getStyleClass().remove("current");
+                if (empty || item == null) { setGraphic(null); setText(null); return; }
+                boolean active = getIndex() == lyrics.activeIndexProperty().get();
+                if (active) { getStyleClass().add("current"); line.getStyleClass().add("current"); }
+                boolean rtl = LyricsModel.isRtl(item.text());
+                line.setNodeOrientation(rtl ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT);
+                // LEFT is mirrored to the visual right edge inside an RTL JavaFX node.
+                line.setAlignment(Pos.CENTER_LEFT);
+                line.setText(item.text().isEmpty() ? " " : item.text());
+                setGraphic(line); setText(null);
+            }
+        });
     }
     private static Label placeholder(String text) { Label label = new Label(text); label.getStyleClass().add("list-placeholder"); return label; }
     @FXML private void chooseFiles() {
@@ -417,7 +545,11 @@ public final class IslandController implements AutoCloseable {
             if (empty || item == null) { setGraphic(null); setText(null); return; }
             title.setText(item.title()); title.setTooltip(new Tooltip(item.title())); done.setSelected(item.done());
             title.getStyleClass().remove("task-done"); if (item.done()) title.getStyleClass().add("task-done");
-            due.setText(item.dueMillis() > 0 ? DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(item.dueMillis())) : "");
+            String dueTime = item.dueMillis() > 0 ? DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(item.dueMillis())) : "";
+            due.setText(item.done() || dueTime.isBlank() ? "" : item.notified() ? "alerted" : dueTime + " · alert");
+            due.setTooltip(dueTime.isBlank() ? null : new Tooltip("Local reminder " +
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(item.dueMillis())) +
+                    (item.notified() ? " · notification requested" : " · while Island is open")));
             setGraphic(row); setText(null);
         }
     }
@@ -426,6 +558,7 @@ public final class IslandController implements AutoCloseable {
         if (morph != null) morph.stop();
         if (pageFade != null) pageFade.stop();
         for (ScaleTransition bar : bars) bar.stop();
+        if (lyrics != null) lyrics.close();
         mascotView.close();
     }
 }

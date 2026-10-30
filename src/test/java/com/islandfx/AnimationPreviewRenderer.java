@@ -41,17 +41,17 @@ public final class AnimationPreviewRenderer {
             CompanionModel companion = new CompanionModel(new CompanionStore(null), Clock.systemDefaultZone(), System::nanoTime, (title, message) -> { });
             Stage stage = new Stage();
             try {
-                Pane desktop = new Pane(); desktop.setPrefSize(540, 340);
+                Pane desktop = new Pane(); desktop.setPrefSize(540, 390);
                 desktop.setStyle("-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #bcd2ec, #446b9e);");
-                Label caption = new Label("JAVAFX MOTION PREVIEW · SIMULATED DATA"); caption.relocate(12, 320);
+                Label caption = new Label("JAVAFX MOTION PREVIEW · SIMULATED DATA"); caption.relocate(12, 370);
                 caption.setStyle("-fx-text-fill: rgba(240,248,255,0.8); -fx-font-size: 9px; -fx-font-weight: bold;");
                 Views.IslandView island = Views.island();
-                island.controller().attach(model, companion, () -> { });
+                island.controller().attach(model, companion, () -> { }, PreviewData.lyrics());
                 Region notch = (Region) island.root();
                 notch.prefWidthProperty().addListener((unused, before, width) -> notch.setLayoutX((540 - width.doubleValue()) / 2));
                 notch.relocate((540 - notch.getPrefWidth()) / 2, 0);
                 desktop.getChildren().addAll(caption, notch);
-                Scene scene = new Scene(desktop, 540, 340); stage.setScene(scene); stage.show();
+                Scene scene = new Scene(desktop, 540, 390); stage.setScene(scene); stage.show();
                 model.setPreviewSample(72, false);
                 model.mediaInfoProperty().set(MediaInfo.session(MediaInfo.Playback.PLAYING, "A sample YouTube video", "Example channel", "chrome.exe", 193, 256));
                 AnimationTimer capture = new AnimationTimer() {

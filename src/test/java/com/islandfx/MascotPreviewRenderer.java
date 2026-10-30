@@ -49,7 +49,7 @@ public final class MascotPreviewRenderer {
                 Label caption = new Label("SIMULATED: IDLE FOR TWO MINUTES"); caption.relocate(115, 65);
                 caption.setStyle("-fx-text-fill: rgba(245,249,255,0.9); -fx-font-size: 9px; -fx-font-weight: bold;");
                 Views.IslandView island = Views.island();
-                island.controller().attach(model, companion, () -> { });
+                island.controller().attach(model, companion, () -> { }, PreviewData.lyrics());
                 Region notch = (Region) island.root(); notch.relocate(115, 0);
                 desktop.getChildren().addAll(caption, notch);
                 Scene scene = new Scene(desktop, 540, 90); stage.setScene(scene); stage.show();

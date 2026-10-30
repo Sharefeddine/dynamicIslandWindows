@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import com.islandfx.MascotView?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
@@ -48,13 +50,16 @@
         <SVGPath fx:id="chevron" content="M 1 2 L 5 6 L 9 2" styleClass="chevron"/>
       </children>
     </HBox>
-    <VBox fx:id="details" visible="false" managed="false" spacing="0" minHeight="252" prefHeight="252" maxHeight="252"
+    <VBox fx:id="details" visible="false" managed="false" spacing="0" minHeight="300" prefHeight="300" maxHeight="300"
           styleClass="notch-body">
       <children>
         <HBox alignment="CENTER_LEFT" spacing="7" prefHeight="28" minHeight="28" maxHeight="28">
           <children>
             <Label fx:id="pageTitleLabel" text="Music" styleClass="page-title"/>
             <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="avatarButton" text="3D: soft" onAction="#toggleAvatar" styleClass="avatar-button" accessibleText="Switch 3D companion style">
+              <tooltip><Tooltip text="Switch between the stylized and anatomical 3D companions"/></tooltip>
+            </Button>
             <Label fx:id="clockLabel" text="--:--" styleClass="clock-label"/>
             <Button fx:id="previousPageButton" text="‹" onAction="#previousPage" styleClass="page-arrow" accessibleText="Previous section">
               <tooltip><Tooltip text="Previous section"/></tooltip>
@@ -189,7 +194,61 @@
                   </children>
                 </HBox>
                 <ListView fx:id="taskList" prefHeight="98" minHeight="50" VBox.vgrow="ALWAYS" styleClass="notch-list" accessibleText="Tasks"/>
-                <Label text="Optional reminder time uses your local clock." styleClass="tiny-hint"/>
+                <HBox alignment="CENTER_LEFT" spacing="4">
+                  <children>
+                    <Label text="Local reminder · Island must be open" styleClass="tiny-hint" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                    <Button fx:id="testNotificationButton" text="Test notification" onAction="#testNotification" styleClass="text-button"/>
+                  </children>
+                </HBox>
+              </children>
+            </VBox>
+            <VBox fx:id="lyricsPage" visible="false" managed="false" spacing="4" styleClass="page-content">
+              <children>
+                <HBox alignment="CENTER_LEFT" spacing="5">
+                  <children>
+                    <Label fx:id="lyricsStatusLabel" text="Play a track to find lyrics online." minWidth="0" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="section-subtitle"/>
+                    <Button fx:id="onlineLyricsButton" text="Online on" onAction="#toggleOnlineLyrics" styleClass="text-button" accessibleText="Enable or disable online lyric lookup">
+                      <tooltip><Tooltip text="When enabled, track title and artist are sent to LRCLIB"/></tooltip>
+                    </Button>
+                    <Button fx:id="retryLyricsButton" text="Retry" onAction="#retryLyrics" styleClass="text-button"/>
+                  </children>
+                </HBox>
+                <Label fx:id="lyricsMatchLabel" text="LRCLIB · title and artist are sent online" maxWidth="Infinity" styleClass="tiny-hint"/>
+                <ListView fx:id="lyricsList" minHeight="60" prefHeight="150" VBox.vgrow="ALWAYS" styleClass="notch-list,lyrics-list" accessibleText="Lyrics in the original language"/>
+              </children>
+            </VBox>
+            <VBox fx:id="adhkarPage" visible="false" managed="false" spacing="4" styleClass="page-content">
+              <children>
+                <HBox alignment="CENTER_LEFT" spacing="5">
+                  <children>
+                    <Button fx:id="morningButton" text="الصباح" onAction="#showMorning" styleClass="pill-button,adhkar-period"/>
+                    <Button fx:id="eveningButton" text="المساء" onAction="#showEvening" styleClass="pill-button,adhkar-period"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="adhkarIndexLabel" text="1 / 1" styleClass="section-subtitle"/>
+                    <Button fx:id="previousDhikrButton" text="‹" onAction="#previousDhikr" styleClass="page-arrow" accessibleText="Previous dhikr"/>
+                    <Button fx:id="nextDhikrButton" text="›" onAction="#nextDhikr" styleClass="page-arrow" accessibleText="Next dhikr"/>
+                  </children>
+                </HBox>
+                <ScrollPane fx:id="adhkarScroll" fitToWidth="true" hbarPolicy="NEVER" minHeight="55" prefHeight="125" VBox.vgrow="ALWAYS" styleClass="adhkar-scroll">
+                  <content>
+                    <VBox spacing="7" minWidth="0" styleClass="adhkar-content">
+                      <children>
+                        <Label fx:id="adhkarTextLabel" text="" wrapText="true" minWidth="0" maxWidth="Infinity" styleClass="adhkar-text"/>
+                        <Label fx:id="adhkarCountLabel" text="" wrapText="true" minWidth="0" maxWidth="Infinity" styleClass="adhkar-count"/>
+                        <Label fx:id="adhkarSourceLabel" text="" wrapText="true" minWidth="0" maxWidth="Infinity" styleClass="adhkar-source"/>
+                      </children>
+                    </VBox>
+                  </content>
+                </ScrollPane>
+                <HBox alignment="CENTER_LEFT" spacing="5">
+                  <children>
+                    <CheckBox fx:id="morningReminderCheck" text="AM" styleClass="reminder-check" accessibleText="Enable morning adhkar reminder"/>
+                    <TextField fx:id="morningTimeField" promptText="07:00" prefWidth="56" styleClass="small-field,reminder-field" accessibleText="Morning reminder time"/>
+                    <CheckBox fx:id="eveningReminderCheck" text="PM" styleClass="reminder-check" accessibleText="Enable evening adhkar reminder"/>
+                    <TextField fx:id="eveningTimeField" promptText="18:00" prefWidth="56" styleClass="small-field,reminder-field" accessibleText="Evening reminder time"/>
+                    <Button fx:id="saveAdhkarButton" text="Save reminders" onAction="#saveAdhkar" styleClass="pill-button,adhkar-save"/>
+                  </children>
+                </HBox>
               </children>
             </VBox>
           </children>
@@ -201,6 +260,8 @@
             <Button fx:id="waterTab" text="Water" onAction="#showWater" styleClass="nav-tab"/>
             <Button fx:id="shelfTab" text="Shelf" onAction="#showShelf" styleClass="nav-tab"/>
             <Button fx:id="tasksTab" text="Tasks" onAction="#showTasks" styleClass="nav-tab"/>
+            <Button fx:id="lyricsTab" text="Lyrics" onAction="#showLyrics" styleClass="nav-tab"/>
+            <Button fx:id="adhkarTab" text="Adhkar" onAction="#showAdhkar" styleClass="nav-tab"/>
           </children>
         </HBox>
         <Label fx:id="noticeLabel" text="Hover to open · click the header to pin" maxWidth="Infinity" minHeight="13" prefHeight="13" maxHeight="13" styleClass="notice-label"/>

@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -16,14 +17,19 @@ import java.util.UUID;
 /** Small, local-only store. Shelf entries are paths to the original files, not copies. */
 final class CompanionStore {
     static final int MAX_ITEMS = 200;
+    enum AvatarStyle { STYLIZED, REALISTIC }
     record Task(String id, String title, boolean done, long dueMillis, boolean notified) { }
     record State(LocalDate waterDate, int waterMl, int waterGoal, int glassMl, boolean waterReminder,
-                 List<String> shelf, List<Task> tasks) {
+                 List<String> shelf, List<Task> tasks, boolean morningReminder, LocalTime morningTime,
+                 boolean eveningReminder, LocalTime eveningTime, AvatarStyle avatarStyle, boolean onlineLyrics) {
         State {
             shelf = List.copyOf(shelf);
             tasks = List.copyOf(tasks);
         }
-        static State defaults(LocalDate today) { return new State(today, 0, 2000, 250, false, List.of(), List.of()); }
+        static State defaults(LocalDate today) {
+            return new State(today, 0, 2000, 250, false, List.of(), List.of(),
+                    false, LocalTime.of(7, 0), false, LocalTime.of(18, 0), AvatarStyle.STYLIZED, true);
+        }
     }
 
     private final Path path; // null is an in-memory store for previews and tests
@@ -71,7 +77,16 @@ final class CompanionStore {
             tasks.add(new Task(id, title, Boolean.parseBoolean(props.getProperty(prefix + "done", "false")),
                     due, Boolean.parseBoolean(props.getProperty(prefix + "notified", "false"))));
         }
-        return new State(date, water, goal, glass, reminder, shelf, tasks);
+        boolean morningReminder = Boolean.parseBoolean(props.getProperty("adhkar.morning.enabled", "false"));
+        boolean eveningReminder = Boolean.parseBoolean(props.getProperty("adhkar.evening.enabled", "false"));
+        LocalTime morningTime = time(props.getProperty("adhkar.morning.time"), LocalTime.of(7, 0));
+        LocalTime eveningTime = time(props.getProperty("adhkar.evening.time"), LocalTime.of(18, 0));
+        AvatarStyle avatarStyle;
+        try { avatarStyle = AvatarStyle.valueOf(props.getProperty("avatar.style", "STYLIZED")); }
+        catch (IllegalArgumentException invalid) { avatarStyle = AvatarStyle.STYLIZED; }
+        boolean onlineLyrics = Boolean.parseBoolean(props.getProperty("lyrics.online", "true"));
+        return new State(date, water, goal, glass, reminder, shelf, tasks, morningReminder, morningTime,
+                eveningReminder, eveningTime, avatarStyle, onlineLyrics);
     }
 
     void save(State state) throws IOException {
@@ -83,6 +98,12 @@ final class CompanionStore {
         props.setProperty("water.goal", Integer.toString(state.waterGoal()));
         props.setProperty("water.glass", Integer.toString(state.glassMl()));
         props.setProperty("water.reminder", Boolean.toString(state.waterReminder()));
+        props.setProperty("adhkar.morning.enabled", Boolean.toString(state.morningReminder()));
+        props.setProperty("adhkar.morning.time", state.morningTime().toString());
+        props.setProperty("adhkar.evening.enabled", Boolean.toString(state.eveningReminder()));
+        props.setProperty("adhkar.evening.time", state.eveningTime().toString());
+        props.setProperty("avatar.style", state.avatarStyle().name());
+        props.setProperty("lyrics.online", Boolean.toString(state.onlineLyrics()));
         props.setProperty("shelf.count", Integer.toString(state.shelf().size()));
         for (int i = 0; i < state.shelf().size(); i++) props.setProperty("shelf." + i, state.shelf().get(i));
         props.setProperty("tasks.count", Integer.toString(state.tasks().size()));
@@ -106,6 +127,12 @@ final class CompanionStore {
         } finally { Files.deleteIfExists(temp); }
     }
 
+    private static LocalTime time(String value, LocalTime fallback) {
+        try {
+            LocalTime parsed = LocalTime.parse(value);
+            return parsed.getSecond() == 0 && parsed.getNano() == 0 ? parsed : fallback;
+        } catch (RuntimeException invalid) { return fallback; }
+    }
     private static int integer(Properties props, String key, int fallback, int min, int max) {
         try {
             int value = Integer.parseInt(props.getProperty(key, ""));

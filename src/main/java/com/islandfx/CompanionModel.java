@@ -32,7 +32,7 @@ import javafx.collections.ObservableList;
 
 /** Local state for the island's pages. The timer and reminders run only while the app is open. */
 final class CompanionModel implements AutoCloseable {
-    enum Page { MUSIC, FOCUS, WATER, SHELF, TASKS }
+    enum Page { MUSIC, FOCUS, WATER, SHELF, TASKS, LYRICS, ADHKAR }
     enum FocusMode {
         FOCUS("Focus time", 25 * 60), BREAK("Short break", 5 * 60);
         final String label;
@@ -55,6 +55,12 @@ final class CompanionModel implements AutoCloseable {
     private final IntegerProperty waterGoal = new SimpleIntegerProperty(2000);
     private final IntegerProperty glassMl = new SimpleIntegerProperty(250);
     private final BooleanProperty waterReminder = new SimpleBooleanProperty(false);
+    private final BooleanProperty morningReminder = new SimpleBooleanProperty(false);
+    private final BooleanProperty eveningReminder = new SimpleBooleanProperty(false);
+    private final BooleanProperty onlineLyrics = new SimpleBooleanProperty(true);
+    private final ObjectProperty<LocalTime> morningTime = new SimpleObjectProperty<>(LocalTime.of(7, 0));
+    private final ObjectProperty<LocalTime> eveningTime = new SimpleObjectProperty<>(LocalTime.of(18, 0));
+    private final ObjectProperty<CompanionStore.AvatarStyle> avatarStyle = new SimpleObjectProperty<>(CompanionStore.AvatarStyle.STYLIZED);
     private final ObservableList<String> shelf = FXCollections.observableArrayList();
     private final ObservableList<CompanionStore.Task> tasks = FXCollections.observableArrayList();
     private final ObservableList<String> shelfView = FXCollections.unmodifiableObservableList(shelf);
@@ -64,6 +70,8 @@ final class CompanionModel implements AutoCloseable {
     private final StringProperty clockText = new SimpleStringProperty("");
     private LocalDate waterDate;
     private Instant nextWaterReminder;
+    private Instant nextMorningReminder;
+    private Instant nextEveningReminder;
     private long focusEndNanos;
     private boolean loadFailed;
     private boolean closed;
@@ -87,9 +95,14 @@ final class CompanionModel implements AutoCloseable {
         waterGoal.set(state.waterGoal());
         glassMl.set(state.glassMl());
         waterReminder.set(state.waterReminder());
+        morningReminder.set(state.morningReminder()); morningTime.set(state.morningTime());
+        eveningReminder.set(state.eveningReminder()); eveningTime.set(state.eveningTime());
+        avatarStyle.set(state.avatarStyle()); onlineLyrics.set(state.onlineLyrics());
         shelf.addAll(state.shelf());
         tasks.addAll(state.tasks());
         nextWaterReminder = clock.instant().plus(WATER_INTERVAL);
+        nextMorningReminder = nextOccurrence(morningTime.get(), clock.instant());
+        nextEveningReminder = nextOccurrence(eveningTime.get(), clock.instant());
         clockText.set(LocalTime.now(clock).format(CLOCK_TIME));
     }
     static CompanionModel create(BiConsumer<String, String> notify) {
@@ -104,6 +117,12 @@ final class CompanionModel implements AutoCloseable {
     IntegerProperty waterGoalProperty() { return waterGoal; }
     IntegerProperty glassMlProperty() { return glassMl; }
     BooleanProperty waterReminderProperty() { return waterReminder; }
+    BooleanProperty morningReminderProperty() { return morningReminder; }
+    BooleanProperty eveningReminderProperty() { return eveningReminder; }
+    BooleanProperty onlineLyricsProperty() { return onlineLyrics; }
+    ObjectProperty<LocalTime> morningTimeProperty() { return morningTime; }
+    ObjectProperty<LocalTime> eveningTimeProperty() { return eveningTime; }
+    ObjectProperty<CompanionStore.AvatarStyle> avatarStyleProperty() { return avatarStyle; }
     ObservableList<String> shelf() { return shelfView; }
     ObservableList<CompanionStore.Task> tasks() { return taskView; }
     StringProperty noticeProperty() { return notice; }
@@ -199,6 +218,47 @@ final class CompanionModel implements AutoCloseable {
         }
     }
 
+    /** Save both schedules atomically; disabled schedules still retain their configured time. */
+    boolean applyAdhkarSettings(String morning, boolean morningEnabled, String evening, boolean eveningEnabled) {
+        try {
+            LocalTime am = LocalTime.parse(morning.trim(), REMINDER_TIME);
+            LocalTime pm = LocalTime.parse(evening.trim(), REMINDER_TIME);
+            morningTime.set(am); eveningTime.set(pm);
+            morningReminder.set(morningEnabled); eveningReminder.set(eveningEnabled);
+            nextMorningReminder = nextOccurrence(am, clock.instant());
+            nextEveningReminder = nextOccurrence(pm, clock.instant());
+            notice.set("Adhkar reminders saved · active while Island is open.");
+            save();
+            return true;
+        } catch (DateTimeParseException | NullPointerException invalid) {
+            notice.set("Use local 24-hour reminder times, for example 07:00 and 18:00.");
+            return false;
+        }
+    }
+
+    private Instant nextOccurrence(LocalTime time, Instant after) {
+        LocalDate day = LocalDate.ofInstant(after, clock.getZone());
+        Instant next = day.atTime(time).atZone(clock.getZone()).toInstant();
+        if (!next.isAfter(after)) next = day.plusDays(1).atTime(time).atZone(clock.getZone()).toInstant();
+        return next;
+    }
+
+    void selectAvatarStyle(CompanionStore.AvatarStyle style) {
+        if (style != null && avatarStyle.get() != style) {
+            avatarStyle.set(style);
+            notice.set(style == CompanionStore.AvatarStyle.REALISTIC ? "Realistic 3D head selected." : "Stylized 3D companion selected.");
+            save();
+        }
+    }
+    void toggleOnlineLyrics() {
+        onlineLyrics.set(!onlineLyrics.get());
+        notice.set(onlineLyrics.get() ? "Online lyric lookup enabled." : "Online lyric lookup disabled.");
+        save();
+    }
+    void testNotification() {
+        publish("Test notification", "Island reminders are connected to system notifications.");
+    }
+
     void addFiles(List<File> files) {
         if (files == null) return;
         int added = 0;
@@ -275,6 +335,14 @@ final class CompanionModel implements AutoCloseable {
             nextWaterReminder = now.plus(WATER_INTERVAL);
             publish("Water reminder", "Time for a glass of water.");
         }
+        if (morningReminder.get() && !now.isBefore(nextMorningReminder)) {
+            nextMorningReminder = nextOccurrence(morningTime.get(), now);
+            publish("Morning adhkar · أذكار الصباح", "حان وقت أذكار الصباح");
+        }
+        if (eveningReminder.get() && !now.isBefore(nextEveningReminder)) {
+            nextEveningReminder = nextOccurrence(eveningTime.get(), now);
+            publish("Evening adhkar · أذكار المساء", "حان وقت أذكار المساء");
+        }
         boolean changed = false;
         for (int i = 0; i < tasks.size(); i++) {
             CompanionStore.Task task = tasks.get(i);
@@ -293,7 +361,8 @@ final class CompanionModel implements AutoCloseable {
     private void save() {
         if (loadFailed) return; // Do not overwrite a file that could not be read.
         try {
-            store.save(new CompanionStore.State(waterDate, waterMl.get(), waterGoal.get(), glassMl.get(), waterReminder.get(), shelf, tasks));
+            store.save(new CompanionStore.State(waterDate, waterMl.get(), waterGoal.get(), glassMl.get(), waterReminder.get(), shelf, tasks,
+                    morningReminder.get(), morningTime.get(), eveningReminder.get(), eveningTime.get(), avatarStyle.get(), onlineLyrics.get()));
             storageWarning.set("");
         } catch (IOException | RuntimeException failure) {
             storageWarning.set("Could not save local data; changes may be lost.");
